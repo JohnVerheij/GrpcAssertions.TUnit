@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="src/GrpcAssertions/GrpcAssertions.csproj" />
+  <Project Path="src/GrpcAssertions.TUnit/GrpcAssertions.TUnit.csproj" />
+  <Project Path="tests/GrpcAssertions.Tests/GrpcAssertions.Tests.csproj" />
+  <Project Path="tests/GrpcAssertions.TUnit.SnapshotTests/GrpcAssertions.TUnit.SnapshotTests.csproj" />
+  <Project Path="tests/GrpcAssertions.TUnit.Tests/GrpcAssertions.TUnit.Tests.csproj" />
+</Solution>

@@ -1,0 +1,80 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>GrpcAssertions</RootNamespace>
+    <AssemblyName>GrpcAssertions</AssemblyName>
+    <IsPublishable>false</IsPublishable>
+
+    <!-- Package identity -->
+    <IsPackable>true</IsPackable>
+    <PackageId>GrpcAssertions</PackageId>
+    <ProductName>GrpcAssertions</ProductName>
+    <Version>0.0.1</Version>
+    <Authors>John Verheij</Authors>
+    <Copyright>Copyright (c) 2026 John Verheij</Copyright>
+    <Description>Framework-agnostic core for gRPC assertions in .NET test projects. Takes the single Grpc.Core.Api dependency (the RpcException / StatusCode / Status types the assertions are about). Test-framework-specific assertion entry points live in adapter packages (GrpcAssertions.TUnit ships today; xUnit, NUnit, MSTest adapters are possible if there is demand). AOT-compatible, trimmable, no runtime reflection. v0.0.1 is a skeleton release that establishes the repository, package identifiers, and quality bar; the full assertion surface ships in v0.1.0.</Description>
+    <PackageTags>grpc;rpc;testing;assertions;dotnet;aot</PackageTags>
+    <PackageProjectUrl>https://github.com/JohnVerheij/GrpcAssertions.TUnit</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <!-- Fallback: nuget.org renders this as a clickable link to the matching GitHub release.
+         Directory.Build.targets overrides this at pack time when CHANGELOG.md contains a
+         matching '## [$(Version)]' section, in which case the section body becomes the
+         Release Notes shown on nuget.org. -->
+    <PackageReleaseNotes>$(RepositoryUrl)/releases/tag/v$(Version)</PackageReleaseNotes>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+
+    <!-- Pre-1.0 suppressions:
+         Proj0212/Proj0213: PackageIcon and PackageIconUrl omitted; will be added by 1.0.0.
+         Proj0241: v0.0.1 is the first release, so no previously-published version exists for
+         package validation to baseline against. v0.1.0 enables EnablePackageValidation + the
+         strict-mode quad with PackageValidationBaselineVersion pinned to v0.0.1. -->
+    <NoWarn>$(NoWarn);Proj0212;Proj0213;Proj0241</NoWarn>
+
+    <!-- Symbol package + API compat (strict mode quad per dpfa Proj0249/0250/0251/0252).
+         PackageValidationBaselineVersion is intentionally absent: v0.0.1 is the first release, so
+         baseline validation has nothing to compare against (Proj0241 suppressed above). The quad is
+         present so v0.1.0 only adds the baseline line. Framework-compat validation runs from v0.0.1. -->
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <EnablePackageValidation>true</EnablePackageValidation>
+    <EnableStrictModeForCompatibleFrameworksInPackage>true</EnableStrictModeForCompatibleFrameworksInPackage>
+    <EnableStrictModeForBaselineValidation>true</EnableStrictModeForBaselineValidation>
+    <ApiCompatGenerateSuppressionFile>true</ApiCompatGenerateSuppressionFile>
+    <ApiCompatEnableRuleCannotChangeParameterName>true</ApiCompatEnableRuleCannotChangeParameterName>
+    <ApiCompatEnableRuleAttributesMustMatch>true</ApiCompatEnableRuleAttributesMustMatch>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <!-- SBOM generation per dpfa Proj0243 (Microsoft.Sbom.Targets pack-time generation).
+         SPDX 3.0 (April 2024) emits richer security-profile metadata than 2.2 / 2.3. -->
+    <GenerateSBOM>true</GenerateSBOM>
+    <SbomGenerationManifestInfo>SPDX:3.0</SbomGenerationManifestInfo>
+
+    <!-- AOT / trimming - core code uses no reflection, safe for AOT-mode test contexts -->
+    <IsAotCompatible>true</IsAotCompatible>
+    <IsTrimmable>true</IsTrimmable>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Alphabetical per dpfa Proj0015. Grpc.Core.Api is a runtime dependency (NOT PrivateAssets):
+         the public assertion surface is typed against RpcException / StatusCode / Status, so the
+         dependency must flow to consumers. -->
+    <PackageReference Include="Grpc.Core.Api" />
+    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Sbom.Targets" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Codifies the no-reflection convention from CONVENTIONS.md as a build-time error. -->
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)../../BannedSymbols.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="/" />
+  </ItemGroup>
+
+</Project>

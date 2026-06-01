@@ -1,0 +1,82 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>GrpcAssertions.TUnit</RootNamespace>
+    <AssemblyName>GrpcAssertions.TUnit</AssemblyName>
+    <IsPublishable>false</IsPublishable>
+
+    <!-- Package identity -->
+    <IsPackable>true</IsPackable>
+    <PackageId>GrpcAssertions.TUnit</PackageId>
+    <ProductName>GrpcAssertions.TUnit</ProductName>
+    <Version>0.0.1</Version>
+    <Authors>John Verheij</Authors>
+    <Copyright>Copyright (c) 2026 John Verheij</Copyright>
+    <Description>TUnit-native gRPC assertions for .NET tests. Builds on the GrpcAssertions framework-agnostic core (Grpc.Core.Api types). v0.0.1 is a skeleton release that establishes the repository, package identifiers, and quality bar and ships the IsRpcException() discriminator; the full outcome-assertion surface (ThrowsGrpcException and the StatusCode shorthands, plus the GrpcCallBuilder test infrastructure) ships in v0.1.0. AOT-compatible, trimmable, no runtime reflection in the assertion path.</Description>
+    <PackageTags>tunit;grpc;rpc;testing;assertions;dotnet;aot</PackageTags>
+    <PackageProjectUrl>https://github.com/JohnVerheij/GrpcAssertions.TUnit</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageReleaseNotes>$(RepositoryUrl)/releases/tag/v$(Version)</PackageReleaseNotes>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+
+    <!-- Pre-1.0 suppressions:
+         Proj0212/Proj0213: PackageIcon and PackageIconUrl omitted; will be added by 1.0.0.
+         Proj0241: v0.0.1 is the first release, so no previously-published version exists for
+         package validation to baseline against. v0.1.0 enables EnablePackageValidation + the
+         strict-mode quad with PackageValidationBaselineVersion pinned to v0.0.1. -->
+    <NoWarn>$(NoWarn);Proj0212;Proj0213;Proj0241</NoWarn>
+
+    <!-- Symbol package + API compat (strict mode quad per dpfa Proj0249/0250/0251/0252).
+         PackageValidationBaselineVersion is intentionally absent: v0.0.1 is the first release, so
+         baseline validation has nothing to compare against (Proj0241 suppressed above). The quad is
+         present so v0.1.0 only adds the baseline line. Framework-compat validation runs from v0.0.1. -->
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <EnablePackageValidation>true</EnablePackageValidation>
+    <EnableStrictModeForCompatibleFrameworksInPackage>true</EnableStrictModeForCompatibleFrameworksInPackage>
+    <EnableStrictModeForBaselineValidation>true</EnableStrictModeForBaselineValidation>
+    <ApiCompatGenerateSuppressionFile>true</ApiCompatGenerateSuppressionFile>
+    <ApiCompatEnableRuleCannotChangeParameterName>true</ApiCompatEnableRuleCannotChangeParameterName>
+    <ApiCompatEnableRuleAttributesMustMatch>true</ApiCompatEnableRuleAttributesMustMatch>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <!-- SBOM generation per dpfa Proj0243 (Microsoft.Sbom.Targets pack-time generation). -->
+    <GenerateSBOM>true</GenerateSBOM>
+    <SbomGenerationManifestInfo>SPDX:3.0</SbomGenerationManifestInfo>
+
+    <!-- AOT / trimming: lib code uses no reflection, safe for AOT-mode test contexts -->
+    <IsAotCompatible>true</IsAotCompatible>
+    <IsTrimmable>true</IsTrimmable>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Alphabetical per dpfa Proj0015 -->
+    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Sbom.Targets" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="all" />
+    <PackageReference Include="TUnit.Assertions" />
+    <PackageReference Include="TUnit.Core" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Framework-agnostic core lives in the GrpcAssertions package. The ProjectReference is
+         rewritten to a PackageReference on GrpcAssertions at pack time; Grpc.Core.Api flows
+         transitively through it. -->
+    <ProjectReference Include="../GrpcAssertions/GrpcAssertions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Codifies the no-reflection convention as a build-time error; the file is shared across
+         both src projects. -->
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)../../BannedSymbols.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="/" />
+  </ItemGroup>
+
+</Project>

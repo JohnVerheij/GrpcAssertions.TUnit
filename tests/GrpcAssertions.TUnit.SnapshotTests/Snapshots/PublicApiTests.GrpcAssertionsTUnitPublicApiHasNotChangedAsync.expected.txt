@@ -1,0 +1,27 @@
+[assembly: System.Reflection.AssemblyMetadata("IsAotCompatible", "True")]
+[assembly: System.Reflection.AssemblyMetadata("IsTrimmable", "True")]
+[assembly: System.Reflection.AssemblyMetadata("RepositoryUrl", "https://github.com/JohnVerheij/GrpcAssertions.TUnit")]
+[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v10.0", FrameworkDisplayName=".NET 10.0")]
+namespace GrpcAssertions.TUnit
+{
+    public static class RpcExceptionAssertions
+    {
+        [TUnit.Assertions.Attributes.GenerateAssertion]
+        public static TUnit.Assertions.Core.AssertionResult IsRpcException(this System.Exception value) { }
+    }
+}
+namespace TUnit.Assertions.Extensions
+{
+    public sealed class Exception_IsRpcException_Assertion : TUnit.Assertions.Core.Assertion<System.Exception>
+    {
+        public Exception_IsRpcException_Assertion(TUnit.Assertions.Core.AssertionContext<System.Exception> context) { }
+        protected override System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> CheckAsync(TUnit.Assertions.Core.EvaluationMetadata<System.Exception> metadata) { }
+        protected override string GetExpectation() { }
+    }
+    public static class RpcExceptionAssertions
+    {
+        [System.Diagnostics.CodeAnalysis.UnconditionalSuppressMessage("Trimming", "IL2091", Justification="Generic type parameter is only used for property access, not instantiation")]
+        public static TUnit.Assertions.Extensions.Exception_IsRpcException_Assertion IsRpcException<TActual>(this TUnit.Assertions.Core.IAssertionSource<TActual> source)
+            where TActual : System.Exception { }
+    }
+}
