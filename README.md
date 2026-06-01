@@ -12,9 +12,9 @@ TUnit-native gRPC assertions for .NET tests. Fluent entry points over TUnit's `A
 
 ## Status
 
-> **v0.0.1 is a skeleton release.** It exists to establish the repository, claim the `GrpcAssertions` and `GrpcAssertions.TUnit` identifiers on nuget.org, and stand up the full family quality bar (AOT-clean, no runtime reflection, SBOM + SLSA provenance, public-API snapshot pinning). The surface is deliberately one assertion wide so it is real and exercised end-to-end rather than empty.
->
-> **v0.1.0** brings the gRPC outcome-assertion surface: a `GrpcCallBuilder` test helper, the `ThrowsGrpcException` / `DoesNotThrowGrpcException` verbs with `WithDetail` / `WithDetailContaining` refinements, and `StatusCode` shorthands (`ThrowsNotFound()`, `ThrowsUnavailable()`, and the rest of the canonical set).
+**v0.1.0** ships the gRPC outcome-assertion surface: `ThrowsGrpcException` / `DoesNotThrowGrpcException` on a delegate, 14 `StatusCode` shorthands, `WithDetail` / `WithDetailContaining` detail refinements, and the `GrpcCallBuilder` test-double helper. The v0.0.1 `IsRpcException()` discriminator is preserved. See the [CHANGELOG](CHANGELOG.md).
+
+Trailers, response-header metadata, streaming, and deadline/cancellation assertions are planned for later minor releases (0.2.0 onward); every release is additive through 1.0.
 
 ## Why
 
@@ -40,26 +40,57 @@ The split keeps the assertion logic free of any single test framework, so the sa
 ## Quick start
 
 ```csharp
-[Test]
-public async Task FailedCall_SurfacesRpcException()
-{
-    var caught = await Assert.That(() => client.GetAsync(request)).Throws<Exception>();
+// Assert a call faults with a specific status and detail, in one chain:
+await Assert.That(() => client.PredictAsync(request, ct))
+    .ThrowsGrpcException(StatusCode.Unavailable)
+    .WithDetailContaining("connection refused", StringComparison.Ordinal);
 
-    await Assert.That(caught!).IsRpcException();
-}
+// Status shorthands read fluently:
+await Assert.That(() => client.GetServerInfoAsync(request, ct))
+    .ThrowsGrpcException()
+    .IsUnimplemented();
+
+// Assert a benign error is swallowed and the call completes:
+await Assert.That(() => client.ClosePickCycleAsync(request, ct))
+    .DoesNotThrowGrpcException();
+
+// Build AsyncUnaryCall<T> test doubles without the five-parameter constructor:
+var ok = GrpcCallBuilder.Success(new PredictReply());
+var bad = GrpcCallBuilder.Faulted<PredictReply>(StatusCode.NotFound, "no such cycle");
 ```
 
 ## Entry points
 
-| Entry point | Receiver | Returns | Behaviour |
-|---|---|---|---|
-| `IsRpcException()` | `Exception` | `AssertionResult` | Asserts the exception is a gRPC `RpcException`. The failure message names the actual exception type. |
+Delegate assertions, on `Assert.That(() => client.Method(...))` (auto-imported from `TUnit.Assertions.Extensions`):
 
-The framework-agnostic core exposes the same check as a plain predicate for non-TUnit consumers:
+| Entry point | Behaviour |
+|---|---|
+| `ThrowsGrpcException()` | Asserts the call throws a gRPC `RpcException` of any status. Returns a chain. |
+| `ThrowsGrpcException(StatusCode expected)` | Asserts the call throws an `RpcException` with the given status. Returns a chain. |
+| `DoesNotThrowGrpcException()` | Asserts the call completes without throwing an `RpcException`. |
+
+Chain off `ThrowsGrpcException()` to refine:
+
+| Chain method | Behaviour |
+|---|---|
+| `IsOk()`, `IsCancelled()`, `IsInvalidArgument()`, `IsDeadlineExceeded()`, `IsNotFound()`, `IsAlreadyExists()`, `IsPermissionDenied()`, `IsResourceExhausted()`, `IsFailedPrecondition()`, `IsAborted()`, `IsUnimplemented()`, `IsInternal()`, `IsUnavailable()`, `IsUnauthenticated()` | Assert the status equals the corresponding `StatusCode`. |
+| `WithDetail(string)` | Assert `Status.Detail` exactly equals the string (ordinal). |
+| `WithDetailContaining(string, StringComparison)` | Assert `Status.Detail` contains the substring using the given comparison. |
+
+Exception discriminator, on a caught `Exception`:
+
+| Entry point | Behaviour |
+|---|---|
+| `IsRpcException()` | Asserts the exception is a gRPC `RpcException`. The failure message names the actual exception type. |
+
+Framework-agnostic core (`GrpcAssertions` namespace), for test doubles and non-TUnit consumers:
 
 | Core API | Behaviour |
 |---|---|
-| `GrpcExceptions.IsRpcException(Exception?)` | `true` when the argument is a gRPC `RpcException`; `false` for `null` and for any other exception type. |
+| `GrpcCallBuilder.Success<T>(T response)` | Builds a successful `AsyncUnaryCall<T>` (response, empty trailers, terminal `OK`). |
+| `GrpcCallBuilder.Faulted<T>(RpcException)` / `Faulted<T>(StatusCode, string?)` | Builds a faulted `AsyncUnaryCall<T>` surfacing the exception's status and trailers. |
+| `GrpcExceptions.IsRpcException(Exception?)` | `true` when the argument is a gRPC `RpcException`; `false` for `null` or any other type. |
+| `GrpcOutcomeRendering.Describe(RpcException)` | Renders `RpcException with StatusCode X, Detail "..."` for failure messages. |
 
 ## Quality bar
 

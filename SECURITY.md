@@ -51,8 +51,8 @@ A **coordinated disclosure** (public CVE filing + advisory + patched release) is
 
 | Version line | Status | Receives security fixes |
 |---|---|---|
-| `0.0.x` (GrpcAssertions.TUnit) | **Current (pre-1.0 skeleton)** | ✅ Yes |
-| `< 0.0.1` | None published | ❌ n/a |
+| `0.1.x` (GrpcAssertions.TUnit) | **Current** | ✅ Yes |
+| `0.0.x` | Previous (skeleton) | ✅ Yes (security fixes only; no new features) |
 
 This table is updated alongside each release that bumps the current line. Coverage of older lines for security-only fixes follows the [.NET LTS / STS rotation](CONVENTIONS.md#tfm-policy): when the package's TFM changes at a major-version boundary, security fixes for the previous line continue to ship for one minor cycle.
 
@@ -86,7 +86,7 @@ To set expectations correctly:
 
 Every release shipped to nuget.org and GitHub Releases carries cryptographic supply-chain attestations stored in GitHub's public transparency log. A security-conscious consumer can verify the chain end-to-end before adopting:
 
-Replace `<package>` (one of `GrpcAssertions` or `GrpcAssertions.TUnit`) and `<version>` (e.g. `0.0.1`) with the artifact you downloaded:
+Replace `<package>` (one of `GrpcAssertions` or `GrpcAssertions.TUnit`) and `<version>` (e.g. `0.1.0`) with the artifact you downloaded:
 
 ```bash
 # Verify SLSA v1.0 build provenance: was this nupkg built from this audited source tree?

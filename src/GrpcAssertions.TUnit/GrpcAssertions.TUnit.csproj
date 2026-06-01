@@ -11,10 +11,10 @@
     <IsPackable>true</IsPackable>
     <PackageId>GrpcAssertions.TUnit</PackageId>
     <ProductName>GrpcAssertions.TUnit</ProductName>
-    <Version>0.0.1</Version>
+    <Version>0.1.0</Version>
     <Authors>John Verheij</Authors>
     <Copyright>Copyright (c) 2026 John Verheij</Copyright>
-    <Description>TUnit-native gRPC assertions for .NET tests. Builds on the GrpcAssertions framework-agnostic core (Grpc.Core.Api types). v0.0.1 is a skeleton release that establishes the repository, package identifiers, and quality bar and ships the IsRpcException() discriminator; the full outcome-assertion surface (ThrowsGrpcException and the StatusCode shorthands, plus the GrpcCallBuilder test infrastructure) ships in v0.1.0. AOT-compatible, trimmable, no runtime reflection in the assertion path.</Description>
+    <Description>TUnit-native gRPC assertions for .NET tests. Fluent ThrowsGrpcException / DoesNotThrowGrpcException on a delegate, with StatusCode shorthands (IsUnavailable, IsNotFound, and the rest) and WithDetail / WithDetailContaining refinements, plus the IsRpcException discriminator and the GrpcCallBuilder test-double helper from the framework-agnostic core. AOT-compatible, trimmable, no runtime reflection in the assertion path.</Description>
     <PackageTags>tunit;grpc;rpc;testing;assertions;dotnet;aot</PackageTags>
     <PackageProjectUrl>https://github.com/JohnVerheij/GrpcAssertions.TUnit</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -23,16 +23,17 @@
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
 
     <!-- Pre-1.0 suppressions:
-         Proj0212/Proj0213: PackageIcon and PackageIconUrl omitted; will be added by 1.0.0.
-         Proj0241: v0.0.1 is the first release, so no previously-published version exists for
-         package validation to baseline against. v0.1.0 enables EnablePackageValidation + the
-         strict-mode quad with PackageValidationBaselineVersion pinned to v0.0.1. -->
-    <NoWarn>$(NoWarn);Proj0212;Proj0213;Proj0241</NoWarn>
+         Proj0212/Proj0213: PackageIcon and PackageIconUrl omitted; will be added by 1.0.0. -->
+    <NoWarn>$(NoWarn);Proj0212;Proj0213</NoWarn>
 
-    <!-- Symbol package + API compat (strict mode quad per dpfa Proj0249/0250/0251/0252).
-         PackageValidationBaselineVersion is intentionally absent: v0.0.1 is the first release, so
-         baseline validation has nothing to compare against (Proj0241 suppressed above). The quad is
-         present so v0.1.0 only adds the baseline line. Framework-compat validation runs from v0.0.1. -->
+    <!-- ApiCompat baseline. v0.1.0 adds the ThrowsGrpcException / DoesNotThrowGrpcException entry
+         points, the GrpcExceptionAssertion chain (status shorthands + detail refinements) and
+         GrpcDoesNotThrowAssertion; the v0.0.1 surface (IsRpcException) is preserved unchanged. The
+         additions are additive (no breaking changes); strict-mode records the new public types as
+         additive CP0001 baseline suppressions in CompatibilitySuppressions.xml. -->
+    <PackageValidationBaselineVersion>0.0.1</PackageValidationBaselineVersion>
+
+    <!-- Symbol package + API compat (strict mode quad per dpfa Proj0249/0250/0251/0252) -->
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <EnablePackageValidation>true</EnablePackageValidation>

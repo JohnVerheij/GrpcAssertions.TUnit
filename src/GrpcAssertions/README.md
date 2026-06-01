@@ -6,15 +6,17 @@
 
 > **Scope:** Test projects only. Not intended for production code.
 
-Framework-agnostic core for the GrpcAssertions package family. Provides predicates over gRPC exceptions (the `Grpc.Core.Api` `RpcException` / `StatusCode` / `Status` types). The TUnit-native fluent assertion entry points ship in the adapter package [`GrpcAssertions.TUnit`](https://www.nuget.org/packages/GrpcAssertions.TUnit/).
+Framework-agnostic core for the GrpcAssertions package family. The TUnit-native fluent assertion entry points ship in the adapter package [`GrpcAssertions.TUnit`](https://www.nuget.org/packages/GrpcAssertions.TUnit/).
 
-> **Most users want [`GrpcAssertions.TUnit`](https://www.nuget.org/packages/GrpcAssertions.TUnit/), not this package directly.** This package only ships the framework-agnostic core; the adapter package adds the assertion entry points your test framework expects.
+> **Most users want [`GrpcAssertions.TUnit`](https://www.nuget.org/packages/GrpcAssertions.TUnit/), not this package directly.** Install this core directly only when authoring a non-TUnit adapter or when you only need the test-double builder and predicates.
 
 ## What's in this package
 
-> **v0.0.1 is a skeleton release** that establishes the repository, package identifiers, and quality bar. The full gRPC outcome-assertion surface (the `GrpcCallBuilder` test infrastructure plus the `ThrowsGrpcException` verbs and `StatusCode` shorthands) ships in v0.1.0.
+- **`GrpcCallBuilder`**: builds `AsyncUnaryCall<T>` instances for gRPC client test doubles, replacing the five-parameter constructor every hand-rolled fake repeats. `Success<T>(T)`, `Faulted<T>(RpcException)`, `Faulted<T>(StatusCode, string?)`.
+- **`GrpcOutcomeRendering`**: renders a gRPC outcome (`StatusCode` plus truncated `Status.Detail`) for failure messages, shared so consumer-authored gRPC assertions produce identical diagnostics.
+- **`GrpcExceptions`**: `IsRpcException(Exception?)` reports whether an exception is a gRPC `RpcException` (null and non-`RpcException` types return `false`).
 
-- **`GrpcExceptions`**: framework-agnostic predicates over gRPC exceptions. `IsRpcException(Exception?)` reports whether an exception is a gRPC `RpcException` (null and non-`RpcException` types return `false`).
+All over the single `Grpc.Core.Api` dependency (`RpcException` / `StatusCode` / `Status`).
 
 ## Install
 
