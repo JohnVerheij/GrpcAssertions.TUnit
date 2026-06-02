@@ -4,8 +4,20 @@
 [assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v10.0", FrameworkDisplayName=".NET 10.0")]
 namespace GrpcAssertions
 {
+    public static class GrpcCallBuilder
+    {
+        public static Grpc.Core.AsyncUnaryCall<TResponse> Faulted<TResponse>(Grpc.Core.RpcException exception) { }
+        public static Grpc.Core.AsyncUnaryCall<TResponse> Faulted<TResponse>(Grpc.Core.StatusCode statusCode, string? detail = null) { }
+        public static Grpc.Core.AsyncUnaryCall<TResponse> Success<TResponse>(TResponse response) { }
+    }
     public static class GrpcExceptions
     {
         public static bool IsRpcException(System.Exception? exception) { }
+    }
+    public static class GrpcOutcomeRendering
+    {
+        public const int MaxDetailLength = 200;
+        public static string Describe(Grpc.Core.RpcException exception) { }
+        public static string DescribeStatus(Grpc.Core.StatusCode statusCode, string? detail) { }
     }
 }

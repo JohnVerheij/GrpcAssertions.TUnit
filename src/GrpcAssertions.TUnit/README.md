@@ -6,15 +6,21 @@
 
 > **Scope:** Test projects only. Not intended for production code.
 
-TUnit-native gRPC assertions for .NET tests. Fluent entry points over TUnit's `Assert.That(...)` pipeline for asserting on gRPC outcomes. AOT-compatible, trimmable, no runtime reflection in the assertion path.
-
-> **v0.0.1 is a skeleton release** establishing the repository, package identifiers, and quality bar. It ships the `IsRpcException()` discriminator only; the full outcome-assertion surface (`ThrowsGrpcException` + the `StatusCode` shorthands, plus the `GrpcCallBuilder` test infrastructure) ships in v0.1.0.
+TUnit-native gRPC assertions for .NET tests. Fluent entry points over TUnit's `Assert.That(...)` pipeline for asserting on gRPC call outcomes. AOT-compatible, trimmable, no runtime reflection in the assertion path.
 
 ## What ships
 
-| Entry point | Receiver | Behaviour |
-|---|---|---|
-| `IsRpcException()` | `Exception` | Asserts the exception is a gRPC `RpcException`. The failure message names the actual exception type. |
+Delegate assertions on `Assert.That(() => client.Method(...))`:
+
+| Entry point | Behaviour |
+|---|---|
+| `ThrowsGrpcException()` / `ThrowsGrpcException(StatusCode)` | Asserts the call throws an `RpcException` (optionally with a status). Returns a chain. |
+| `DoesNotThrowGrpcException()` | Asserts the call completes without throwing an `RpcException`. |
+| `IsRpcException()` (on a caught `Exception`) | Asserts the exception is a gRPC `RpcException`. |
+
+Chain off `ThrowsGrpcException()`: 14 `StatusCode` shorthands (`IsUnavailable()`, `IsNotFound()`, and the rest), plus `WithDetail(string)` and `WithDetailContaining(string, StringComparison)`.
+
+The framework-agnostic core (`GrpcAssertions`) also ships the `GrpcCallBuilder` test-double helper for building `AsyncUnaryCall<T>` fakes.
 
 ## Install
 
@@ -27,14 +33,15 @@ dotnet add package GrpcAssertions.TUnit
 ## Quick start
 
 ```csharp
-[Test]
-public async Task FailedCall_SurfacesRpcException()
-{
-    var caught = await Assert.That(() => client.GetAsync(request)).Throws<Exception>();
+await Assert.That(() => client.PredictAsync(request, ct))
+    .ThrowsGrpcException(StatusCode.Unavailable)
+    .WithDetailContaining("connection refused", StringComparison.Ordinal);
 
-    await Assert.That(caught!).IsRpcException();
-}
+await Assert.That(() => client.ClosePickCycleAsync(request, ct))
+    .DoesNotThrowGrpcException();
 ```
+
+The full reference, including the `GrpcCallBuilder` test doubles and the complete shorthand list, is in the [GitHub README](https://github.com/JohnVerheij/GrpcAssertions.TUnit#readme).
 
 ## License
 

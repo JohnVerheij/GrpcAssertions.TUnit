@@ -4,6 +4,34 @@
 [assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v10.0", FrameworkDisplayName=".NET 10.0")]
 namespace GrpcAssertions.TUnit
 {
+    public sealed class GrpcDoesNotThrowAssertion<TValue> : TUnit.Assertions.Core.Assertion<TValue>
+    {
+        public GrpcDoesNotThrowAssertion(TUnit.Assertions.Core.AssertionContext<TValue> context) { }
+        protected override System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> CheckAsync(TUnit.Assertions.Core.EvaluationMetadata<TValue> metadata) { }
+        protected override string GetExpectation() { }
+    }
+    public sealed class GrpcExceptionAssertion : TUnit.Assertions.Core.Assertion<Grpc.Core.RpcException>
+    {
+        public GrpcExceptionAssertion(TUnit.Assertions.Core.AssertionContext<Grpc.Core.RpcException> context, Grpc.Core.StatusCode? expectedStatus) { }
+        protected override System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> CheckAsync(TUnit.Assertions.Core.EvaluationMetadata<Grpc.Core.RpcException> metadata) { }
+        protected override string GetExpectation() { }
+        public GrpcAssertions.TUnit.GrpcExceptionAssertion IsAborted() { }
+        public GrpcAssertions.TUnit.GrpcExceptionAssertion IsAlreadyExists() { }
+        public GrpcAssertions.TUnit.GrpcExceptionAssertion IsCancelled() { }
+        public GrpcAssertions.TUnit.GrpcExceptionAssertion IsDeadlineExceeded() { }
+        public GrpcAssertions.TUnit.GrpcExceptionAssertion IsFailedPrecondition() { }
+        public GrpcAssertions.TUnit.GrpcExceptionAssertion IsInternal() { }
+        public GrpcAssertions.TUnit.GrpcExceptionAssertion IsInvalidArgument() { }
+        public GrpcAssertions.TUnit.GrpcExceptionAssertion IsNotFound() { }
+        public GrpcAssertions.TUnit.GrpcExceptionAssertion IsOk() { }
+        public GrpcAssertions.TUnit.GrpcExceptionAssertion IsPermissionDenied() { }
+        public GrpcAssertions.TUnit.GrpcExceptionAssertion IsResourceExhausted() { }
+        public GrpcAssertions.TUnit.GrpcExceptionAssertion IsUnauthenticated() { }
+        public GrpcAssertions.TUnit.GrpcExceptionAssertion IsUnavailable() { }
+        public GrpcAssertions.TUnit.GrpcExceptionAssertion IsUnimplemented() { }
+        public GrpcAssertions.TUnit.GrpcExceptionAssertion WithDetail(string expected) { }
+        public GrpcAssertions.TUnit.GrpcExceptionAssertion WithDetailContaining(string substring, System.StringComparison comparison) { }
+    }
     public static class RpcExceptionAssertions
     {
         [TUnit.Assertions.Attributes.GenerateAssertion]
@@ -17,6 +45,12 @@ namespace TUnit.Assertions.Extensions
         public Exception_IsRpcException_Assertion(TUnit.Assertions.Core.AssertionContext<System.Exception> context) { }
         protected override System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> CheckAsync(TUnit.Assertions.Core.EvaluationMetadata<System.Exception> metadata) { }
         protected override string GetExpectation() { }
+    }
+    public static class GrpcDelegateAssertionExtensions
+    {
+        public static GrpcAssertions.TUnit.GrpcDoesNotThrowAssertion<TValue> DoesNotThrowGrpcException<TValue>(this TUnit.Assertions.Core.IDelegateAssertionSource<TValue> source) { }
+        public static GrpcAssertions.TUnit.GrpcExceptionAssertion ThrowsGrpcException<TValue>(this TUnit.Assertions.Core.IDelegateAssertionSource<TValue> source) { }
+        public static GrpcAssertions.TUnit.GrpcExceptionAssertion ThrowsGrpcException<TValue>(this TUnit.Assertions.Core.IDelegateAssertionSource<TValue> source, Grpc.Core.StatusCode expected) { }
     }
     public static class RpcExceptionAssertions
     {
