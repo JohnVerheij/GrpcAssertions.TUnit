@@ -143,21 +143,21 @@ Framework-agnostic core (`GrpcAssertions` namespace), for test doubles and non-T
 
 Every failed assertion renders the actual gRPC outcome alongside the expectation. A status mismatch:
 
-```
+```text
 Expected the gRPC call to throw an RpcException with StatusCode Unavailable
 but it threw RpcException with StatusCode Internal, Detail "Unhandled exception in pipeline"
 ```
 
 A call that should have thrown but completed:
 
-```
+```text
 Expected the gRPC call to throw an RpcException
 but no exception was thrown
 ```
 
 A `DoesNotThrowGrpcException()` that faulted:
 
-```
+```text
 Expected the gRPC call not to throw an RpcException
 but it threw RpcException with StatusCode Unavailable, Detail "connection refused"
 ```

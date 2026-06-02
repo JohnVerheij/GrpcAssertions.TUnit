@@ -41,14 +41,16 @@ public sealed class GrpcExceptionAssertion : Assertion<RpcException>
     /// <param name="expected">The expected detail. Must not be null.</param>
     /// <returns>This assertion for chaining.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="expected"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">A detail expectation was already specified.</exception>
     public GrpcExceptionAssertion WithDetail(string expected)
     {
         ArgumentNullException.ThrowIfNull(expected);
+        ThrowIfDetailAlreadySpecified();
         _hasDetailCheck = true;
         _detailContains = false;
         _expectedDetail = expected;
         _detailComparison = StringComparison.Ordinal;
-        Context.ExpressionBuilder.Append(string.Concat(".WithDetail(\"", expected, "\")"));
+        Context.ExpressionBuilder.Append(string.Concat(".WithDetail(\"", EscapeForExpression(expected), "\")"));
         return this;
     }
 
@@ -58,14 +60,16 @@ public sealed class GrpcExceptionAssertion : Assertion<RpcException>
     /// <param name="comparison">The comparison used to locate the substring.</param>
     /// <returns>This assertion for chaining.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="substring"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">A detail expectation was already specified.</exception>
     public GrpcExceptionAssertion WithDetailContaining(string substring, StringComparison comparison)
     {
         ArgumentNullException.ThrowIfNull(substring);
+        ThrowIfDetailAlreadySpecified();
         _hasDetailCheck = true;
         _detailContains = true;
         _expectedDetail = substring;
         _detailComparison = comparison;
-        Context.ExpressionBuilder.Append(string.Concat(".WithDetailContaining(\"", substring, "\", StringComparison.", comparison.ToString(), ")"));
+        Context.ExpressionBuilder.Append(string.Concat(".WithDetailContaining(\"", EscapeForExpression(substring), "\", StringComparison.", comparison.ToString(), ")"));
         return this;
     }
 
@@ -172,10 +176,34 @@ public sealed class GrpcExceptionAssertion : Assertion<RpcException>
 
     private GrpcExceptionAssertion WithStatus(StatusCode statusCode, string methodName)
     {
+        if (_expectedStatus is not null)
+        {
+            throw new InvalidOperationException(
+                "The expected gRPC status code has already been specified; set it once via ThrowsGrpcException(StatusCode) or a single status shorthand.");
+        }
+
         _expectedStatus = statusCode;
         Context.ExpressionBuilder.Append(string.Concat(".", methodName, "()"));
         return this;
     }
+
+    private void ThrowIfDetailAlreadySpecified()
+    {
+        if (_hasDetailCheck)
+        {
+            throw new InvalidOperationException(
+                "A detail expectation has already been specified; chain a single WithDetail or WithDetailContaining.");
+        }
+    }
+
+    // Escapes a user-supplied detail so the rendered assertion chain stays a single, unambiguous
+    // line even when the value contains quotes, backslashes, or line breaks.
+    private static string EscapeForExpression(string value)
+        => value
+            .Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("\"", "\\\"", StringComparison.Ordinal)
+            .Replace("\r", "\\r", StringComparison.Ordinal)
+            .Replace("\n", "\\n", StringComparison.Ordinal);
 
     private bool DetailMatches(RpcException rpc)
         => _detailContains

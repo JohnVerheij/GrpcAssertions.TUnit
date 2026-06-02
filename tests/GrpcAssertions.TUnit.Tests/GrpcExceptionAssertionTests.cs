@@ -194,4 +194,22 @@ internal sealed class GrpcExceptionAssertionTests
         await Assert.That(() => { _ = GrpcDelegateAssertionExtensions.DoesNotThrowGrpcException<object>(null!); })
             .Throws<ArgumentNullException>();
     }
+
+    [Test]
+    public async Task StatusSpecifiedTwice_ThrowsInvalidOperation(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That(async () =>
+            await Assert.That(Completing()).ThrowsGrpcException(StatusCode.NotFound).IsUnavailable())
+            .Throws<InvalidOperationException>();
+    }
+
+    [Test]
+    public async Task DetailSpecifiedTwice_ThrowsInvalidOperation(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That(async () =>
+            await Assert.That(Completing()).ThrowsGrpcException().WithDetail("a").WithDetail("b"))
+            .Throws<InvalidOperationException>();
+    }
 }
