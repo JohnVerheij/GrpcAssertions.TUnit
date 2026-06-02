@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.0] - 2026-06-01: gRPC outcome assertions
+## [0.1.0] - 2026-06-02: gRPC outcome assertions
 
 Feature release. Lifts the package from skeleton to functional: the gRPC outcome-assertion surface ships. `ThrowsGrpcException()` asserts a delegate threw an `RpcException`, with `StatusCode` shorthands and `Status.Detail` refinements; `DoesNotThrowGrpcException()` covers the benign-error swallow tests; and `GrpcCallBuilder` removes the five-parameter `AsyncUnaryCall<T>` constructor that every hand-rolled gRPC fake repeats. The v0.0.1 `IsRpcException()` discriminator is preserved unchanged.
 
