@@ -12,7 +12,7 @@ Framework-agnostic core for the GrpcAssertions package family. The TUnit-native 
 
 ## What's in this package
 
-- **`GrpcCallBuilder`**: builds `AsyncUnaryCall<T>` instances for gRPC client test doubles, replacing the five-parameter constructor every hand-rolled fake repeats. `Success<T>(T)`, `Faulted<T>(RpcException)`, `Faulted<T>(StatusCode, string?)`.
+- **`GrpcCallBuilder`**: builds `AsyncUnaryCall<T>` instances for gRPC client test doubles, replacing the five-parameter constructor every hand-rolled fake repeats. `Success<T>(T)` (infers `T` from its argument), `Faulted<T>(RpcException)` and `Faulted<T>(StatusCode, string?)` (need the explicit `T`). The [GitHub README](https://github.com/JohnVerheij/GrpcAssertions.TUnit#cookbook-common-patterns) has a before/after recipe for replacing hand-rolled factories.
 - **`GrpcOutcomeRendering`**: renders a gRPC outcome (`StatusCode` plus truncated `Status.Detail`) for failure messages, shared so consumer-authored gRPC assertions produce identical diagnostics.
 - **`GrpcExceptions`**: `IsRpcException(Exception?)` reports whether an exception is a gRPC `RpcException` (null and non-`RpcException` types return `false`).
 
