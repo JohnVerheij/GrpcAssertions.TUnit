@@ -11,7 +11,7 @@
     <IsPackable>true</IsPackable>
     <PackageId>GrpcAssertions.TUnit</PackageId>
     <ProductName>GrpcAssertions.TUnit</ProductName>
-    <Version>0.1.1</Version>
+    <Version>0.1.2</Version>
     <Authors>John Verheij</Authors>
     <Copyright>Copyright (c) 2026 John Verheij</Copyright>
     <Description>TUnit-native gRPC assertions for .NET tests. Fluent ThrowsGrpcException / DoesNotThrowGrpcException on a delegate, with StatusCode shorthands (IsUnavailable, IsNotFound, and the rest) and WithDetail / WithDetailContaining refinements, plus the IsRpcException discriminator and the GrpcCallBuilder test-double helper from the framework-agnostic core. AOT-compatible, trimmable, no runtime reflection in the assertion path.</Description>
@@ -26,10 +26,8 @@
          Proj0212/Proj0213: PackageIcon and PackageIconUrl omitted; will be added by 1.0.0. -->
     <NoWarn>$(NoWarn);Proj0212;Proj0213</NoWarn>
 
-    <!-- ApiCompat baseline. v0.1.1 is a docs-only patch over v0.1.0: no public-surface change, so
-         strict-mode validates against the v0.1.0 baseline with only the assembly-version bump
-         (CP0003) recorded in CompatibilitySuppressions.xml. -->
-    <PackageValidationBaselineVersion>0.1.0</PackageValidationBaselineVersion>
+    <!-- ApiCompat baseline: pins to the previous shipped version; a docs-only patch records only the assembly-version bump (CP0003). -->
+    <PackageValidationBaselineVersion>0.1.1</PackageValidationBaselineVersion>
 
     <!-- Symbol package + API compat (strict mode quad per dpfa Proj0249/0250/0251/0252) -->
     <IncludeSymbols>true</IncludeSymbols>

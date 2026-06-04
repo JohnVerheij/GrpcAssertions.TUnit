@@ -286,11 +286,11 @@ await Assert.That(caught!).IsRpcException();
 
 ## Design notes
 
-- **Assertions on delegates, not on `RpcException` instances.** The primary entry point is `Assert.That(() => client.Method(...))`. The library executes the call and inspects the thrown `RpcException`, which is cleaner than requiring the test to catch the exception itself. Internally the caught exception is moved into the assertion value via TUnit's `MapException<RpcException>()`: an `RpcException` becomes the value, any other thrown exception leaves the value null with the metadata exception populated, and nothing thrown leaves both null.
+- **Assertions on delegates, not on `RpcException` instances.** The primary entry point is `Assert.That(() => client.Method(...))`. The library executes the call and inspects the thrown `RpcException`, cleaner than catching the exception in the test. A non-`RpcException` throw, or nothing thrown, fails the assertion rather than the test.
 - **`Grpc.Core.Api` only.** The package depends on `Grpc.Core.Api` (the minimal API surface containing `RpcException`, `StatusCode`, `Status`, `Metadata`), not `Grpc.Net.Client` or `Google.Protobuf`, so it works with any gRPC implementation. The dependency is intrinsic: the public surface is typed against the consumer's real `RpcException`, so a home-grown enum would not compile against thrown exceptions.
 - **No Protobuf dependency.** The library asserts on gRPC transport-level outcomes (status, detail), not on Protobuf message structure. Assert on response message fields with standard TUnit assertions on the deserialized response object.
 - **Explicit `StringComparison` on detail assertions.** `WithDetailContaining` requires a `StringComparison`, matching the convention across the assertion family. `WithDetail` is exact and ordinal.
-- **`GrpcCallBuilder` is test infrastructure, not an assertion.** It builds `AsyncUnaryCall<T>` instances for fakes and lives in the framework-agnostic core, so a future non-TUnit adapter reuses it. Both builders guard their arguments with `ArgumentNullException.ThrowIfNull`, a strict improvement over hand-rolled fakes that dereference null later.
+- **`GrpcCallBuilder` is test infrastructure, not an assertion.** It builds `AsyncUnaryCall<T>` instances for fakes and lives in the framework-agnostic core, so a future non-TUnit adapter reuses it. Both builders guard their arguments with `ArgumentNullException.ThrowIfNull`, unlike hand-rolled fakes that dereference null later.
 - **No runtime reflection** in the assertion path; AOT-clean and trimmable.
 
 ## Stability intent (pre-1.0)
