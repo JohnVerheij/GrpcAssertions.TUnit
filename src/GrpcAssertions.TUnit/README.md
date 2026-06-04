@@ -20,7 +20,7 @@ Delegate assertions on `Assert.That(() => client.Method(...))`:
 
 Chain off `ThrowsGrpcException()`: 14 `StatusCode` shorthands (`IsUnavailable()`, `IsNotFound()`, and the rest), plus `WithDetail(string)` and `WithDetailContaining(string, StringComparison)`.
 
-The framework-agnostic core (`GrpcAssertions`) also ships the `GrpcCallBuilder` test-double helper for building `AsyncUnaryCall<T>` fakes.
+The framework-agnostic core (`GrpcAssertions`) also ships the `GrpcCallBuilder` test-double helper for building `AsyncUnaryCall<T>` fakes. `Success<T>(T)` infers `T` from its argument; `Faulted<T>(RpcException)` needs the explicit `T`. The [GitHub README](https://github.com/JohnVerheij/GrpcAssertions.TUnit#cookbook-common-patterns) has a before/after recipe for replacing hand-rolled `AsyncUnaryCall<T>` factories, and guidance on when *not* to migrate a test to `ThrowsGrpcException`.
 
 ## Install
 

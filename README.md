@@ -25,6 +25,8 @@ TUnit-native gRPC assertions for .NET tests. Fluent entry points over TUnit's `A
 - [Entry points](#entry-points)
 - [Failure diagnostics](#failure-diagnostics)
 - [Cookbook: common patterns](#cookbook-common-patterns)
+  - [Replacing hand-rolled `AsyncUnaryCall<T>` factories](#replacing-hand-rolled-asyncunarycallt-factories)
+  - [When *not* to use `ThrowsGrpcException`](#when-not-to-use-throwsgrpcexception)
 - [Design notes](#design-notes)
 - [Stability intent (pre-1.0)](#stability-intent-pre-10)
 - [Roadmap](#roadmap)
@@ -165,6 +167,84 @@ but it threw RpcException with StatusCode Unavailable, Detail "connection refuse
 `Status.Detail` is truncated at `GrpcOutcomeRendering.MaxDetailLength` (200 characters) with a horizontal-ellipsis suffix, so a verbose server detail does not flood the test output.
 
 ## Cookbook: common patterns
+
+### Replacing hand-rolled `AsyncUnaryCall<T>` factories
+
+The single highest-value use of `GrpcCallBuilder` is deleting the fake-client constructor boilerplate. A generated gRPC client method returns `AsyncUnaryCall<T>`, and its public constructor takes five arguments: the response task, a response-headers task, a status accessor, a trailers accessor, and a dispose callback. Every hand-rolled client fake repeats that shape for every method.
+
+Before, a fake that returns a canned response or faults on demand:
+
+```csharp
+public sealed class FakeGreeterClient : Greeter.GreeterClient
+{
+    private readonly bool _fail;
+    private readonly MyResponse _reply;
+
+    public FakeGreeterClient(MyResponse reply, bool fail = false) => (_reply, _fail) = (reply, fail);
+
+    public override AsyncUnaryCall<MyResponse> SayHelloAsync(MyRequest request, CallOptions options)
+    {
+        if (_fail)
+        {
+            var ex = new RpcException(new Status(StatusCode.Unavailable, "server down"));
+            return new AsyncUnaryCall<MyResponse>(
+                Task.FromException<MyResponse>(ex),
+                Task.FromResult(new Metadata()),
+                () => ex.Status,
+                () => ex.Trailers,
+                () => { });
+        }
+
+        return new AsyncUnaryCall<MyResponse>(
+            Task.FromResult(_reply),
+            Task.FromResult(new Metadata()),
+            () => new Status(StatusCode.OK, string.Empty),
+            () => new Metadata(),
+            () => { });
+    }
+}
+```
+
+After:
+
+```csharp
+public sealed class FakeGreeterClient : Greeter.GreeterClient
+{
+    private readonly bool _fail;
+    private readonly MyResponse _reply;
+
+    public FakeGreeterClient(MyResponse reply, bool fail = false) => (_reply, _fail) = (reply, fail);
+
+    public override AsyncUnaryCall<MyResponse> SayHelloAsync(MyRequest request, CallOptions options)
+        => _fail ? GrpcCallBuilder.Faulted<MyResponse>(StatusCode.Unavailable, "server down")
+                 : GrpcCallBuilder.Success(_reply);
+}
+```
+
+`Success<T>(T)` infers `T` from the response argument, so `GrpcCallBuilder.Success(_reply)` needs no type argument. `Faulted<T>(RpcException)` and `Faulted<T>(StatusCode, string?)` cannot infer `T` (the response type appears only in the return), so name it explicitly: `GrpcCallBuilder.Faulted<MyResponse>(...)`.
+
+To fault with a pre-built `RpcException` (for example to attach trailers), use the `Faulted<T>(RpcException)` overload:
+
+```csharp
+var ex = new RpcException(new Status(StatusCode.NotFound, "no such greeting"));
+return GrpcCallBuilder.Faulted<MyResponse>(ex);
+```
+
+### When *not* to use `ThrowsGrpcException`
+
+`ThrowsGrpcException(code)` asserts the call threw an `RpcException` carrying a given status. That is the right contract for "the wrapper translates a failure into this status." It is the wrong contract for a test that asserts the wrapper rethrows the *same* `RpcException` instance it received: matching the status code is weaker than asserting reference identity, so migrating such a test to `ThrowsGrpcException(code)` would silently weaken it.
+
+Identity-propagation tests stay on `Throws<RpcException>()` plus `IsSameReferenceAs`:
+
+```csharp
+var thrown = new RpcException(new Status(StatusCode.Internal, "boom"));
+var sut = new RetryingGreeterClient(new FakeGreeterClient(reply: null!, throwOnCall: thrown));
+
+var caught = await Assert.That(() => sut.SayHelloAsync(request, ct)).Throws<RpcException>();
+await Assert.That(caught!).IsSameReferenceAs(thrown);
+```
+
+The point is that the exact instance propagated unchanged: same status, same trailers, same stack, no re-wrapping. Use `ThrowsGrpcException(code)` when you care that the *status* is correct; keep `Throws<RpcException>()` + `IsSameReferenceAs` when you care that the *instance* is preserved.
 
 **Assert a specific failure, status and detail in one chain:**
 

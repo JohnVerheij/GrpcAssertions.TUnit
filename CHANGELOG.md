@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-06-04
+
+Documentation patch. No public-surface change; the shipped assemblies are identical to v0.1.0.
+
+### Changed
+
+- README adds a **"Replacing hand-rolled `AsyncUnaryCall<T>` factories"** recipe as the lead Cookbook entry: a before/after that contrasts the five-parameter `AsyncUnaryCall<T>` constructor (response task, response-headers task, status accessor, trailers accessor, dispose callback) with `GrpcCallBuilder.Success(response)` and `GrpcCallBuilder.Faulted<T>(...)`, and spells out the type-inference rule (`Success<T>(T)` infers `T`; `Faulted<T>(RpcException)` needs the explicit `T`). This is the highest-value use of the builder: deleting fake-client constructor boilerplate.
+- README adds a **"When *not* to use `ThrowsGrpcException`"** recipe: tests that assert the wrapper rethrows the *same* `RpcException` instance are a stronger contract than `ThrowsGrpcException(code)` and stay on `Throws<RpcException>()` plus `IsSameReferenceAs`, since matching only the status code would weaken an identity-propagation test.
+- The two packed package READMEs link to the new Cookbook recipes and restate the `Success<T>` / `Faulted<T>` inference rule, kept consistent with the GitHub README.
+
 ## [0.1.0] - 2026-06-02: gRPC outcome assertions
 
 Feature release. Lifts the package from skeleton to functional: the gRPC outcome-assertion surface ships. `ThrowsGrpcException()` asserts a delegate threw an `RpcException`, with `StatusCode` shorthands and `Status.Detail` refinements; `DoesNotThrowGrpcException()` covers the benign-error swallow tests; and `GrpcCallBuilder` removes the five-parameter `AsyncUnaryCall<T>` constructor that every hand-rolled gRPC fake repeats. The v0.0.1 `IsRpcException()` discriminator is preserved unchanged.
@@ -36,6 +46,7 @@ Skeleton release. Establishes the repository, the `GrpcAssertions` (core) and `G
 - Single disclosed runtime dependency: `Grpc.Core.Api` (Apache-2.0), the package that defines the `RpcException` / `StatusCode` / `Status` types the assertions are about. It flows transitively to consumers through the core package.
 - Repository scaffolding at the family quality bar: central package management, shared `Directory.Build.props` / `.targets`, `BannedSymbols.txt` no-reflection enforcement, CI (build / test / pack, CodeQL across `csharp` and `actions`, OpenSSF Scorecard, dependency-review, the zizmor workflow audit), Renovate dependency automation, SLSA build-provenance plus Sigstore-signed SBOM attestations on release, and a public-API snapshot test pinning both shipped assemblies.
 
-[Unreleased]: https://github.com/JohnVerheij/GrpcAssertions.TUnit/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/JohnVerheij/GrpcAssertions.TUnit/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/JohnVerheij/GrpcAssertions.TUnit/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/JohnVerheij/GrpcAssertions.TUnit/compare/v0.0.1...v0.1.0
 [0.0.1]: https://github.com/JohnVerheij/GrpcAssertions.TUnit/releases/tag/v0.0.1
