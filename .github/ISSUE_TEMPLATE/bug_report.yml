@@ -71,7 +71,7 @@ body:
         [Test]
         public async Task Reproduces_The_Issue()
         {
-            await Assert.That(() => client.PredictAsync(request, ct))
+            await Assert.That(() => client.GetOrderAsync(request, ct))
                 .ThrowsGrpcException(StatusCode.NotFound);
         }
     validations:

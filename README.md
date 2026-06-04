@@ -42,7 +42,7 @@ TUnit-native gRPC assertions for .NET tests. Fluent entry points over TUnit's `A
 gRPC failures surface as a single `RpcException` carrying a `Status` (a `StatusCode` plus a detail string). Asserting on that with raw `try`/`catch` plus `Assert.That(ex.StatusCode).IsEqualTo(...)` is verbose and easy to get subtly wrong: forgetting to assert that an exception was thrown at all, or matching the wrong status. Typical hand-rolled code:
 
 ```csharp
-var ex = await Assert.That(() => client.PredictAsync(request)).Throws<RpcException>();
+var ex = await Assert.That(() => client.GetOrderAsync(request)).Throws<RpcException>();
 await Assert.That(ex!.StatusCode).IsEqualTo(StatusCode.Unavailable);
 await Assert.That(ex.Status.Detail).Contains("connection refused");
 ```
@@ -90,7 +90,7 @@ global using GrpcAssertions;   // GrpcCallBuilder, GrpcExceptions, GrpcOutcomeRe
 
 ```csharp
 // Assert a call faults with a specific status and detail, in one chain:
-await Assert.That(() => client.PredictAsync(request, ct))
+await Assert.That(() => client.GetOrderAsync(request, ct))
     .ThrowsGrpcException(StatusCode.Unavailable)
     .WithDetailContaining("connection refused", StringComparison.Ordinal);
 
@@ -100,12 +100,12 @@ await Assert.That(() => client.GetServerInfoAsync(request, ct))
     .IsUnimplemented();
 
 // Assert a benign error is swallowed and the call completes:
-await Assert.That(() => client.ClosePickCycleAsync(request, ct))
+await Assert.That(() => client.CancelOrderAsync(request, ct))
     .DoesNotThrowGrpcException();
 
 // Build AsyncUnaryCall<T> test doubles without the five-parameter constructor:
-var ok = GrpcCallBuilder.Success(new PredictReply());
-var bad = GrpcCallBuilder.Faulted<PredictReply>(StatusCode.NotFound, "no such cycle");
+var ok = GrpcCallBuilder.Success(new OrderReply());
+var bad = GrpcCallBuilder.Faulted<OrderReply>(StatusCode.NotFound, "no such order");
 ```
 
 ## Entry points
@@ -249,7 +249,7 @@ The point is that the exact instance propagated unchanged: same status, same tra
 **Assert a specific failure, status and detail in one chain:**
 
 ```csharp
-await Assert.That(() => client.PredictAsync(request, ct))
+await Assert.That(() => client.GetOrderAsync(request, ct))
     .ThrowsGrpcException(StatusCode.InvalidArgument)
     .WithDetailContaining("field 'id' is required", StringComparison.Ordinal);
 ```
@@ -257,30 +257,30 @@ await Assert.That(() => client.PredictAsync(request, ct))
 **Assert any gRPC failure without pinning the status** (when the status is environment-dependent):
 
 ```csharp
-await Assert.That(() => client.PredictAsync(request, ct)).ThrowsGrpcException();
+await Assert.That(() => client.GetOrderAsync(request, ct)).ThrowsGrpcException();
 ```
 
 **Assert a benign-error swallow** (the client catches a known `RpcException` and completes):
 
 ```csharp
-await Assert.That(() => client.ClosePickCycleAsync(request, ct)).DoesNotThrowGrpcException();
+await Assert.That(() => client.CancelOrderAsync(request, ct)).DoesNotThrowGrpcException();
 ```
 
 **Remove the five-parameter constructor from a gRPC client fake:**
 
 ```csharp
-// before: new AsyncUnaryCall<PredictReply>(Task.FromResult(reply), Task.FromResult(new Metadata()),
+// before: new AsyncUnaryCall<OrderReply>(Task.FromResult(reply), Task.FromResult(new Metadata()),
 //             () => new Status(StatusCode.OK, ""), () => new Metadata(), () => { });
 // after:
-public override AsyncUnaryCall<PredictReply> PredictAsync(PredictRequest request, CallOptions options)
-    => _fail ? GrpcCallBuilder.Faulted<PredictReply>(StatusCode.Unavailable, "server down")
+public override AsyncUnaryCall<OrderReply> GetOrderAsync(OrderRequest request, CallOptions options)
+    => _fail ? GrpcCallBuilder.Faulted<OrderReply>(StatusCode.Unavailable, "server down")
              : GrpcCallBuilder.Success(_reply);
 ```
 
 **Discriminate a caught exception before inspecting it:**
 
 ```csharp
-var caught = await Assert.That(() => client.PredictAsync(request, ct)).Throws<Exception>();
+var caught = await Assert.That(() => client.GetOrderAsync(request, ct)).Throws<Exception>();
 await Assert.That(caught!).IsRpcException();
 ```
 
