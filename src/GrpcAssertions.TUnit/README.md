@@ -12,7 +12,7 @@ TUnit-native gRPC assertions for .NET tests. Fluent entry points over TUnit's `A
 
 Delegate assertions on `Assert.That(() => client.Method(...))`:
 
-| Entry point | Behaviour |
+| Entry point | Behavior |
 |---|---|
 | `ThrowsGrpcException()` / `ThrowsGrpcException(StatusCode)` | Asserts the call throws an `RpcException` (optionally with a status). Returns a chain. |
 | `DoesNotThrowGrpcException()` | Asserts the call completes without throwing an `RpcException`. |

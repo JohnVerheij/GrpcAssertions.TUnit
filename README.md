@@ -112,7 +112,7 @@ var bad = GrpcCallBuilder.Faulted<OrderReply>(StatusCode.NotFound, "no such orde
 
 Delegate assertions, on `Assert.That(() => client.Method(...))` (auto-imported from `TUnit.Assertions.Extensions`):
 
-| Entry point | Behaviour |
+| Entry point | Behavior |
 |---|---|
 | `ThrowsGrpcException()` | Asserts the call throws a gRPC `RpcException` of any status. Returns a chain. |
 | `ThrowsGrpcException(StatusCode expected)` | Asserts the call throws an `RpcException` with the given status. Returns a chain. |
@@ -120,7 +120,7 @@ Delegate assertions, on `Assert.That(() => client.Method(...))` (auto-imported f
 
 Chain off `ThrowsGrpcException()` to refine:
 
-| Chain method | Behaviour |
+| Chain method | Behavior |
 |---|---|
 | `IsOk()`, `IsCancelled()`, `IsInvalidArgument()`, `IsDeadlineExceeded()`, `IsNotFound()`, `IsAlreadyExists()`, `IsPermissionDenied()`, `IsResourceExhausted()`, `IsFailedPrecondition()`, `IsAborted()`, `IsUnimplemented()`, `IsInternal()`, `IsUnavailable()`, `IsUnauthenticated()` | Assert the status equals the corresponding `StatusCode`. |
 | `WithDetail(string)` | Assert `Status.Detail` exactly equals the string (ordinal). |
@@ -128,13 +128,13 @@ Chain off `ThrowsGrpcException()` to refine:
 
 Exception discriminator, on a caught `Exception`:
 
-| Entry point | Behaviour |
+| Entry point | Behavior |
 |---|---|
 | `IsRpcException()` | Asserts the exception is a gRPC `RpcException`. The failure message names the actual exception type. |
 
 Framework-agnostic core (`GrpcAssertions` namespace), for test doubles and non-TUnit consumers:
 
-| Core API | Behaviour |
+| Core API | Behavior |
 |---|---|
 | `GrpcCallBuilder.Success<T>(T response)` | Builds a successful `AsyncUnaryCall<T>` (response, empty trailers, terminal `OK`). |
 | `GrpcCallBuilder.Faulted<T>(RpcException)` / `Faulted<T>(StatusCode, string?)` | Builds a faulted `AsyncUnaryCall<T>` surfacing the exception's status and trailers. |
