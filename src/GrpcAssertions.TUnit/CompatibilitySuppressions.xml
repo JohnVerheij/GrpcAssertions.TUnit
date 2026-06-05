@@ -3,7 +3,7 @@
 <Suppressions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
   <Suppression>
     <DiagnosticId>CP0003</DiagnosticId>
-    <Target>GrpcAssertions.TUnit, Version=0.1.0.0, Culture=neutral, PublicKeyToken=null</Target>
+    <Target>GrpcAssertions.TUnit, Version=0.1.1.0, Culture=neutral, PublicKeyToken=null</Target>
     <Left>lib/net10.0/GrpcAssertions.TUnit.dll</Left>
     <Right>lib/net10.0/GrpcAssertions.TUnit.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>

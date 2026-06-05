@@ -12,7 +12,7 @@ TUnit-native gRPC assertions for .NET tests. Fluent entry points over TUnit's `A
 
 Delegate assertions on `Assert.That(() => client.Method(...))`:
 
-| Entry point | Behaviour |
+| Entry point | Behavior |
 |---|---|
 | `ThrowsGrpcException()` / `ThrowsGrpcException(StatusCode)` | Asserts the call throws an `RpcException` (optionally with a status). Returns a chain. |
 | `DoesNotThrowGrpcException()` | Asserts the call completes without throwing an `RpcException`. |
@@ -33,11 +33,11 @@ dotnet add package GrpcAssertions.TUnit
 ## Quick start
 
 ```csharp
-await Assert.That(() => client.PredictAsync(request, ct))
+await Assert.That(() => client.GetOrderAsync(request, ct))
     .ThrowsGrpcException(StatusCode.Unavailable)
     .WithDetailContaining("connection refused", StringComparison.Ordinal);
 
-await Assert.That(() => client.ClosePickCycleAsync(request, ct))
+await Assert.That(() => client.CancelOrderAsync(request, ct))
     .DoesNotThrowGrpcException();
 ```
 
