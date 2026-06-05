@@ -9,11 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.2] - 2026-06-05: documentation refresh
 
-Documentation-only release. No API or behaviour change.
+Documentation and release-tooling release. No API or behaviour change.
 
 ### Changed
 
 - Refreshed the README (plain-ASCII punctuation) and rewrote the shared `CONVENTIONS.md`: removed the version-history preamble so it reads as a conventions document, not a changelog.
+- The release workflow now publishes the matching `CHANGELOG.md` section as the GitHub release body (`body_path`), so release notes carry the full hand-written detail instead of GitHub's auto-generated commit summary.
 
 ## [0.1.1] - 2026-06-04
 
