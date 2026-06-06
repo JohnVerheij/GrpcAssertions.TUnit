@@ -55,15 +55,15 @@
       },
       "TUnit": {
         "type": "Direct",
-        "requested": "[1.47.0, )",
-        "resolved": "1.47.0",
-        "contentHash": "dXV4/97Hg4+kNaOU3dkUTkQUP1bhR/g8ZJzk/VcgV9pgiXlJYbywQ65dnGycW+vkUsuQ9hNSMnUvCv5TaD2P9Q==",
+        "requested": "[1.50.0, )",
+        "resolved": "1.50.0",
+        "contentHash": "81WgUEjFgW7UURJ5N2YqzTStyeeFYyKpm8USugrZ7L29BBOBRX5pea3MBbxRfmzmm1rCEkkLcFTCO9DxmiEtRQ==",
         "dependencies": {
           "Microsoft.Testing.Extensions.CodeCoverage": "18.7.0",
           "Microsoft.Testing.Extensions.Telemetry": "2.2.3",
           "Microsoft.Testing.Extensions.TrxReport": "2.2.3",
-          "TUnit.Assertions": "1.47.0",
-          "TUnit.Engine": "1.47.0"
+          "TUnit.Assertions": "1.50.0",
+          "TUnit.Engine": "1.50.0"
         }
       },
       "EnumerableAsyncProcessor": {
@@ -152,14 +152,14 @@
       },
       "TUnit.Engine": {
         "type": "Transitive",
-        "resolved": "1.47.0",
-        "contentHash": "8Dupobkhs89h2PklhtwecbTjewgmt/1Vyv96lMGC5sFL7hl3CrCjWKyUeooQpI+hMuIDWWcUVId3NnKHzY2UWw==",
+        "resolved": "1.50.0",
+        "contentHash": "67B5yh38S8bZuCNXMXXy+6BwwEkZFGNEzGL/Aqe736dTSINf4avonyteiiX9ivnKbxyU/JqespVOgT61AW0bOA==",
         "dependencies": {
           "EnumerableAsyncProcessor": "3.8.4",
           "Microsoft.Testing.Extensions.TrxReport.Abstractions": "2.2.3",
           "Microsoft.Testing.Platform": "2.2.3",
           "Microsoft.Testing.Platform.MSBuild": "2.2.3",
-          "TUnit.Core": "1.47.0"
+          "TUnit.Core": "1.50.0"
         }
       },
       "grpcassertions": {
@@ -171,9 +171,9 @@
       "grpcassertions.tunit": {
         "type": "Project",
         "dependencies": {
-          "GrpcAssertions": "[0.0.1, )",
-          "TUnit.Assertions": "[1.47.0, )",
-          "TUnit.Core": "[1.47.0, )"
+          "GrpcAssertions": "[0.1.2, )",
+          "TUnit.Assertions": "[1.50.0, )",
+          "TUnit.Core": "[1.50.0, )"
         }
       },
       "Grpc.Core.Api": {
@@ -184,15 +184,15 @@
       },
       "TUnit.Assertions": {
         "type": "CentralTransitive",
-        "requested": "[1.47.0, )",
-        "resolved": "1.47.0",
-        "contentHash": "4Cd5vUKPrZX0+4C2OTE/XwkB+GKyD03Ksb87IrRCpcMw9RFU2W3Y4GG4Mr7rZq3rzNhMCTaUlxdxTUyrCdUNOw=="
+        "requested": "[1.50.0, )",
+        "resolved": "1.50.0",
+        "contentHash": "3UQ5ryMr7CWUphorwfwMasYMylR9Kk1kLsYuh8my1KpdghgY+KcqJ2xJ0ut+j/lEnjsLo/FVpQRzcT2lZj4A/g=="
       },
       "TUnit.Core": {
         "type": "CentralTransitive",
-        "requested": "[1.47.0, )",
-        "resolved": "1.47.0",
-        "contentHash": "wQzj5bzBXAgPAyF3cfJW2JVWrFcE8P3WYNyoocyJOQehZU7VTmzifoFlHGQJiKKYqIz+q0NIGnp4gIllI5cllA=="
+        "requested": "[1.50.0, )",
+        "resolved": "1.50.0",
+        "contentHash": "AayC8BoKzYC4Vqu+AR2l6ZfL7e/TB1IHt4opz7pIv3yPIbq5ZJf5rOMNpqqpR/PKceMp/vsjUMAcEvFmOi8S+A=="
       }
     }
   }
