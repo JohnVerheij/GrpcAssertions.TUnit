@@ -114,4 +114,16 @@ internal sealed class GrpcCallBuilderTests
         await Assert.That(() => GrpcCallBuilder.Faulted<string>(StatusCode.Internal, "x", (Metadata)null!))
             .Throws<ArgumentNullException>();
     }
+
+    [Test]
+    public async Task Faulted_WithTrailers_NullDetail_IsEmpty(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var trailers = new Metadata { { "k", "v" } };
+        using var call = GrpcCallBuilder.Faulted<string>(StatusCode.Internal, null, trailers);
+
+        var thrown = await Assert.That(async () => await call.ResponseAsync).Throws<RpcException>();
+        await Assert.That(thrown!.Status.Detail).IsEqualTo(string.Empty);
+        await Assert.That(thrown.Trailers.GetValue("k")).IsEqualTo("v");
+    }
 }

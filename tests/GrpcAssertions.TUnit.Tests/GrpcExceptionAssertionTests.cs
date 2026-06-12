@@ -37,6 +37,16 @@ internal sealed class GrpcExceptionAssertionTests
     }
 
     [Test]
+    public async Task WithTrailer_KeyMatchIsCaseInsensitive(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        // gRPC lowercases metadata keys, so the expectation key may use any casing and still match.
+        var trailers = new Metadata { { "error-code", "E42" } };
+        await Assert.That(FaultingWithTrailers(StatusCode.Internal, "boom", trailers))
+            .ThrowsGrpcException().WithTrailer("Error-Code", "E42");
+    }
+
+    [Test]
     public async Task WithTrailer_TextMismatch_FailsRenderingTrailers(CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
