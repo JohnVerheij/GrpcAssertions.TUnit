@@ -2,8 +2,22 @@
 <!-- https://learn.microsoft.com/dotnet/fundamentals/package-validation/diagnostic-ids -->
 <Suppressions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
   <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:GrpcAssertions.GrpcCallBuilder.Faulted``1(Grpc.Core.StatusCode,System.String,Grpc.Core.Metadata)</Target>
+    <Left>lib/net10.0/GrpcAssertions.dll</Left>
+    <Right>lib/net10.0/GrpcAssertions.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:GrpcAssertions.GrpcCallBuilder.Success``1(``0,Grpc.Core.Metadata,Grpc.Core.Metadata)</Target>
+    <Left>lib/net10.0/GrpcAssertions.dll</Left>
+    <Right>lib/net10.0/GrpcAssertions.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
     <DiagnosticId>CP0003</DiagnosticId>
-    <Target>GrpcAssertions, Version=0.1.1.0, Culture=neutral, PublicKeyToken=null</Target>
+    <Target>GrpcAssertions, Version=0.1.2.0, Culture=neutral, PublicKeyToken=null</Target>
     <Left>lib/net10.0/GrpcAssertions.dll</Left>
     <Right>lib/net10.0/GrpcAssertions.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>

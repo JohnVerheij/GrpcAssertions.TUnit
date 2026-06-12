@@ -1,4 +1,8 @@
 using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Grpc.Core;
 using GrpcAssertions;
@@ -22,6 +26,7 @@ namespace GrpcAssertions.TUnit;
 /// </remarks>
 public sealed class GrpcExceptionAssertion : Assertion<RpcException>
 {
+    private readonly List<(string Key, string? Text, byte[]? Bytes)> _expectedTrailers = new();
     private StatusCode? _expectedStatus;
     private bool _hasDetailCheck;
     private bool _detailContains;
@@ -70,6 +75,39 @@ public sealed class GrpcExceptionAssertion : Assertion<RpcException>
         _expectedDetail = substring;
         _detailComparison = comparison;
         Context.ExpressionBuilder.Append(string.Concat(".WithDetailContaining(\"", EscapeForExpression(substring), "\", StringComparison.", comparison.ToString(), ")"));
+        return this;
+    }
+
+    /// <summary>Asserts the exception's <see cref="RpcException.Trailers"/> contain a text entry at
+    /// <paramref name="key"/> whose value equals <paramref name="value"/> (ordinal). Keys are matched
+    /// case-insensitively (gRPC lowercases metadata keys). Binary (<c>-bin</c>) entries are never
+    /// matched by this overload; use <see cref="WithTrailer(string, ReadOnlySpan{byte})"/> for those.</summary>
+    /// <param name="key">The trailer key. Must not be null.</param>
+    /// <param name="value">The expected text value. Must not be null.</param>
+    /// <returns>This assertion for chaining.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="key"/> or <paramref name="value"/> is null.</exception>
+    public GrpcExceptionAssertion WithTrailer(string key, string value)
+    {
+        ArgumentNullException.ThrowIfNull(key);
+        ArgumentNullException.ThrowIfNull(value);
+        _expectedTrailers.Add((key, value, null));
+        Context.ExpressionBuilder.Append(string.Concat(".WithTrailer(\"", EscapeForExpression(key), "\", \"", EscapeForExpression(value), "\")"));
+        return this;
+    }
+
+    /// <summary>Asserts the exception's <see cref="RpcException.Trailers"/> contain a binary entry at
+    /// <paramref name="key"/> (a <c>-bin</c> key) whose bytes equal <paramref name="value"/>. Text
+    /// entries are never matched by this overload; use <see cref="WithTrailer(string, string)"/> for
+    /// those. A <see cref="byte"/> array converts to <paramref name="value"/> implicitly.</summary>
+    /// <param name="key">The binary trailer key (ends in <c>-bin</c>). Must not be null.</param>
+    /// <param name="value">The expected bytes.</param>
+    /// <returns>This assertion for chaining.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="key"/> is null.</exception>
+    public GrpcExceptionAssertion WithTrailer(string key, ReadOnlySpan<byte> value)
+    {
+        ArgumentNullException.ThrowIfNull(key);
+        _expectedTrailers.Add((key, null, value.ToArray()));
+        Context.ExpressionBuilder.Append(string.Concat(".WithTrailer(\"", EscapeForExpression(key), "\", byte[", value.Length.ToString(CultureInfo.InvariantCulture), "])"));
         return this;
     }
 
@@ -154,6 +192,12 @@ public sealed class GrpcExceptionAssertion : Assertion<RpcException>
             return Task.FromResult(AssertionResult.Failed(string.Concat("it threw ", GrpcOutcomeRendering.Describe(rpc))));
         }
 
+        if (_expectedTrailers.Exists(expectation => !TrailerMatches(rpc.Trailers, expectation)))
+        {
+            return Task.FromResult(AssertionResult.Failed(string.Concat(
+                "it threw ", GrpcOutcomeRendering.Describe(rpc), DescribeTrailers(rpc.Trailers))));
+        }
+
         return Task.FromResult(AssertionResult.Passed);
     }
 
@@ -171,7 +215,66 @@ public sealed class GrpcExceptionAssertion : Assertion<RpcException>
             detail = string.Concat(detailPrefix, _expectedDetail, "\"");
         }
 
-        return string.Concat("the gRPC call to throw an RpcException", status, detail);
+        var trailers = string.Empty;
+        if (_expectedTrailers.Count > 0)
+        {
+            var sb = new StringBuilder();
+            foreach (var (key, text, bytes) in _expectedTrailers)
+            {
+                sb.Append(" with trailer \"").Append(key).Append("\" = ");
+                sb.Append(bytes is not null
+                    ? string.Concat("byte[", bytes.Length.ToString(CultureInfo.InvariantCulture), "]")
+                    : string.Concat("\"", text, "\""));
+            }
+
+            trailers = sb.ToString();
+        }
+
+        return string.Concat("the gRPC call to throw an RpcException", status, detail, trailers);
+    }
+
+    // Matches a single trailer expectation against the exception's trailers. Binary (-bin) entries
+    // expose their bytes via ValueBytes; calling .Value on a binary entry throws, so the IsBinary
+    // guard is load-bearing: a text expectation only inspects text entries, a binary one only inspects
+    // binary entries. Keys are compared case-insensitively because gRPC lowercases metadata keys.
+    private static bool TrailerMatches(Metadata trailers, (string Key, string? Text, byte[]? Bytes) expectation)
+        => trailers.Any(entry =>
+            string.Equals(entry.Key, expectation.Key, StringComparison.OrdinalIgnoreCase)
+            && (expectation.Bytes is not null
+                ? entry.IsBinary && entry.ValueBytes.AsSpan().SequenceEqual(expectation.Bytes)
+                : !entry.IsBinary && string.Equals(entry.Value, expectation.Text, StringComparison.Ordinal)));
+
+    // Renders the trailers for a failure message. Binary entries render as "(binary, N bytes)" rather
+    // than their value, since their value is not a string (and reading .Value would throw).
+    private static string DescribeTrailers(Metadata trailers)
+    {
+        if (trailers.Count is 0)
+        {
+            return "; trailers: (none)";
+        }
+
+        var sb = new StringBuilder("; trailers: ");
+        var first = true;
+        foreach (var entry in trailers)
+        {
+            if (!first)
+            {
+                sb.Append(", ");
+            }
+
+            first = false;
+            sb.Append(entry.Key).Append('=');
+            if (entry.IsBinary)
+            {
+                sb.Append("(binary, ").Append(entry.ValueBytes.Length.ToString(CultureInfo.InvariantCulture)).Append(" bytes)");
+            }
+            else
+            {
+                sb.Append('"').Append(entry.Value).Append('"');
+            }
+        }
+
+        return sb.ToString();
     }
 
     private GrpcExceptionAssertion WithStatus(StatusCode statusCode, string methodName)

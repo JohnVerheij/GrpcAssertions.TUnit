@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-06-12: response and trailer metadata on the builder, trailer assertions
+
+Minor release. Lets a faked call carry response headers and trailers, and adds trailer assertions (text and binary) to the `RpcException` chain. Purely additive.
+
+### Added
+
+- **`GrpcCallBuilder.Success<T>(T response, Metadata? responseHeaders, Metadata? trailers)`** and **`GrpcCallBuilder.Faulted<T>(StatusCode statusCode, string? detail, Metadata trailers)`** build calls that carry response metadata, so a wrapper that reads response headers or trailers can be tested against a fake. A null headers or trailers argument is treated as empty metadata.
+- **`WithTrailer(string key, string value)`** and **`WithTrailer(string key, ReadOnlySpan<byte> value)`** on the `ThrowsGrpcException()` chain assert the exception's `Trailers` contain a text or binary (`-bin`) entry. Keys are matched case-insensitively (gRPC lowercases metadata keys). The text overload reads `Metadata.Entry.Value` and the binary overload reads `Metadata.Entry.ValueBytes`, each guarded by `Entry.IsBinary`, so the value of a binary entry is never read as a string. On failure the message renders the trailers, with binary entries shown as `(binary, N bytes)`.
+
+### Fixed
+
+- **`GrpcCallBuilder.Success<T>` now returns the same trailers `Metadata` instance on every call** to the trailers accessor, matching a real client; it previously returned a fresh empty `Metadata` each time, so an identity check or mutation did not behave as it would against a real call.
+
+### Changed
+
+- README adds an **"Await the call against a generated client"** note: a generated client's `XAsync` returns `AsyncUnaryCall<T>` whose fault lives in `ResponseAsync`, so a delegate that returns the call without awaiting it never surfaces the fault and the assertion reports no exception. Assert via `async () => await client.XAsync(...)` or `client.XAsync(...).ResponseAsync` when testing a raw generated client; wrapper tests, which return `Task`, are unaffected.
+- Bumped `PackageValidationBaselineVersion` from `0.1.1` to `0.1.2` on both packages so ApiCompat strict-mode validates `0.2.0` against the most recently published baseline. The new overloads are recorded as additive differences in `CompatibilitySuppressions.xml`.
+
 ## [0.1.2] - 2026-06-05: documentation refresh
 
 Documentation and release-tooling release. No API or behavior change.

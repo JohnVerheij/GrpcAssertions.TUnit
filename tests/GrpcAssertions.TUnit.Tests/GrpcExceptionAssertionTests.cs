@@ -24,6 +24,129 @@ internal sealed class GrpcExceptionAssertionTests
     private static Func<Task> Completing()
         => () => Task.CompletedTask;
 
+    private static Func<Task> FaultingWithTrailers(StatusCode code, string detail, Metadata trailers)
+        => () => Task.FromException(new RpcException(new Status(code, detail), trailers));
+
+    [Test]
+    public async Task WithTrailer_TextMatch_Passes(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var trailers = new Metadata { { "error-code", "E42" } };
+        await Assert.That(FaultingWithTrailers(StatusCode.Internal, "boom", trailers))
+            .ThrowsGrpcException().WithTrailer("error-code", "E42");
+    }
+
+    [Test]
+    public async Task WithTrailer_KeyMatchIsCaseInsensitive(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        // gRPC lowercases metadata keys, so the expectation key may use any casing and still match.
+        var trailers = new Metadata { { "error-code", "E42" } };
+        await Assert.That(FaultingWithTrailers(StatusCode.Internal, "boom", trailers))
+            .ThrowsGrpcException().WithTrailer("Error-Code", "E42");
+    }
+
+    [Test]
+    public async Task WithTrailer_TextMismatch_FailsRenderingTrailers(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var trailers = new Metadata { { "error-code", "E42" } };
+        var ex = await Assert.That(async () =>
+            await Assert.That(FaultingWithTrailers(StatusCode.Internal, "boom", trailers))
+                .ThrowsGrpcException().WithTrailer("error-code", "WRONG"))
+            .Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("trailers: error-code=\"E42\"");
+    }
+
+    [Test]
+    public async Task WithTrailer_MissingKey_Fails(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var trailers = new Metadata { { "present", "x" } };
+        var ex = await Assert.That(async () =>
+            await Assert.That(FaultingWithTrailers(StatusCode.Internal, "boom", trailers))
+                .ThrowsGrpcException().WithTrailer("absent", "x"))
+            .Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("present=");
+    }
+
+    [Test]
+    public async Task WithTrailer_BinaryMatch_Passes(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var payload = new byte[] { 1, 2, 3 };
+        var trailers = new Metadata { { "blob-bin", payload } };
+        await Assert.That(FaultingWithTrailers(StatusCode.Internal, "boom", trailers))
+            .ThrowsGrpcException().WithTrailer("blob-bin", payload);
+    }
+
+    [Test]
+    public async Task WithTrailer_BinaryEntryNotMatchedByTextOverload_AndRendersBinary(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        // The text overload must not match (nor throw on reading the value of) a binary entry, and the
+        // failure rendering must describe it as binary rather than reading its value as a string.
+        var trailers = new Metadata { { "blob-bin", new byte[] { 9, 9 } } };
+        var ex = await Assert.That(async () =>
+            await Assert.That(FaultingWithTrailers(StatusCode.Internal, "boom", trailers))
+                .ThrowsGrpcException().WithTrailer("blob-bin", "anything"))
+            .Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("(binary, 2 bytes)");
+    }
+
+    [Test]
+    public async Task WithTrailer_BinaryMismatch_Fails(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var trailers = new Metadata { { "blob-bin", new byte[] { 1, 2 } } };
+        var ex = await Assert.That(async () =>
+            await Assert.That(FaultingWithTrailers(StatusCode.Internal, "boom", trailers))
+                .ThrowsGrpcException().WithTrailer("blob-bin", new byte[] { 9, 9 }))
+            .Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("blob-bin=(binary, 2 bytes)");
+    }
+
+    [Test]
+    public async Task WithTrailer_NoTrailers_FailsRenderingNone(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var ex = await Assert.That(async () =>
+            await Assert.That(Faulting(StatusCode.Internal, "boom")).ThrowsGrpcException().WithTrailer("k", "v"))
+            .Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("trailers: (none)");
+    }
+
+    [Test]
+    public async Task WithTrailer_BinaryExpectationVsTextEntry_FailsRenderingAllTrailers(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        // Two trailers (so the failure renders them comma-separated), and a binary expectation against
+        // a text entry: a text entry is never matched as binary, and the text entry's value is rendered.
+        var trailers = new Metadata { { "code", "E1" }, { "note", "n" } };
+        var ex = await Assert.That(async () =>
+            await Assert.That(FaultingWithTrailers(StatusCode.Internal, "boom", trailers))
+                .ThrowsGrpcException().WithTrailer("code", new byte[] { 5 }))
+            .Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("code=\"E1\", note=\"n\"");
+    }
+
+    [Test]
+    public async Task WithTrailer_AfterStatusAndDetail_AllChecked(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var trailers = new Metadata { { "error-code", "E1" } };
+        await Assert.That(FaultingWithTrailers(StatusCode.NotFound, "missing", trailers))
+            .ThrowsGrpcException(StatusCode.NotFound)
+            .WithDetail("missing")
+            .WithTrailer("error-code", "E1");
+    }
+
     [Test]
     public async Task ThrowsGrpcException_RpcExceptionThrown_Passes(CancellationToken ct)
     {

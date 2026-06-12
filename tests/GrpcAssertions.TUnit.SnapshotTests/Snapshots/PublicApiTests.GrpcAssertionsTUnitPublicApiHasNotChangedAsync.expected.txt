@@ -31,6 +31,8 @@ namespace GrpcAssertions.TUnit
         public GrpcAssertions.TUnit.GrpcExceptionAssertion IsUnimplemented() { }
         public GrpcAssertions.TUnit.GrpcExceptionAssertion WithDetail(string expected) { }
         public GrpcAssertions.TUnit.GrpcExceptionAssertion WithDetailContaining(string substring, System.StringComparison comparison) { }
+        public GrpcAssertions.TUnit.GrpcExceptionAssertion WithTrailer(string key, System.ReadOnlySpan<byte> value) { }
+        public GrpcAssertions.TUnit.GrpcExceptionAssertion WithTrailer(string key, string value) { }
     }
     public static class RpcExceptionAssertions
     {
