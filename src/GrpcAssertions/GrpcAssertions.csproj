@@ -11,7 +11,7 @@
     <IsPackable>true</IsPackable>
     <PackageId>GrpcAssertions</PackageId>
     <ProductName>GrpcAssertions</ProductName>
-    <Version>0.1.2</Version>
+    <Version>0.2.0</Version>
     <Authors>John Verheij</Authors>
     <Copyright>Copyright (c) 2026 John Verheij</Copyright>
     <Description>Framework-agnostic core for gRPC assertions in .NET test projects. Provides the GrpcCallBuilder test-double helper (Success and Faulted AsyncUnaryCall builders), gRPC outcome rendering for failure messages, and RpcException predicates, over the single Grpc.Core.Api dependency (the RpcException / StatusCode / Status types the assertions are about). Test-framework-specific assertion entry points live in adapter packages (GrpcAssertions.TUnit ships today; xUnit, NUnit, MSTest adapters are possible if there is demand). AOT-compatible, trimmable, no runtime reflection.</Description>
@@ -31,7 +31,7 @@
     <NoWarn>$(NoWarn);Proj0212;Proj0213</NoWarn>
 
     <!-- ApiCompat baseline: pins to the previous shipped version; a docs-only patch records only the assembly-version bump (CP0003). -->
-    <PackageValidationBaselineVersion>0.1.1</PackageValidationBaselineVersion>
+    <PackageValidationBaselineVersion>0.1.2</PackageValidationBaselineVersion>
 
     <!-- Symbol package + API compat (strict mode quad per dpfa Proj0249/0250/0251/0252) -->
     <IncludeSymbols>true</IncludeSymbols>

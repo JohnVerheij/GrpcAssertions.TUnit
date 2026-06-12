@@ -27,6 +27,7 @@ TUnit-native gRPC assertions for .NET tests. Fluent entry points over TUnit's `A
 - [Cookbook: common patterns](#cookbook-common-patterns)
   - [Replacing hand-rolled `AsyncUnaryCall<T>` factories](#replacing-hand-rolled-asyncunarycallt-factories)
   - [When *not* to use `ThrowsGrpcException`](#when-not-to-use-throwsgrpcexception)
+  - [Await the call against a generated client](#await-the-call-against-a-generated-client)
 - [Design notes](#design-notes)
 - [Stability intent (pre-1.0)](#stability-intent-pre-10)
 - [Roadmap](#roadmap)
@@ -125,6 +126,8 @@ Chain off `ThrowsGrpcException()` to refine:
 | `IsOk()`, `IsCancelled()`, `IsInvalidArgument()`, `IsDeadlineExceeded()`, `IsNotFound()`, `IsAlreadyExists()`, `IsPermissionDenied()`, `IsResourceExhausted()`, `IsFailedPrecondition()`, `IsAborted()`, `IsUnimplemented()`, `IsInternal()`, `IsUnavailable()`, `IsUnauthenticated()` | Assert the status equals the corresponding `StatusCode`. |
 | `WithDetail(string)` | Assert `Status.Detail` exactly equals the string (ordinal). |
 | `WithDetailContaining(string, StringComparison)` | Assert `Status.Detail` contains the substring using the given comparison. |
+| `WithTrailer(string key, string value)` *(v0.2.0+)* | Assert the exception's `Trailers` contain a text entry at `key` equal to `value` (ordinal). Keys match case-insensitively (gRPC lowercases keys). |
+| `WithTrailer(string key, ReadOnlySpan<byte> value)` *(v0.2.0+)* | Assert the exception's `Trailers` contain a binary (`-bin`) entry at `key` whose bytes equal `value`. A `byte[]` converts implicitly. |
 
 Exception discriminator, on a caught `Exception`:
 
@@ -136,8 +139,8 @@ Framework-agnostic core (`GrpcAssertions` namespace), for test doubles and non-T
 
 | Core API | Behavior |
 |---|---|
-| `GrpcCallBuilder.Success<T>(T response)` | Builds a successful `AsyncUnaryCall<T>` (response, empty trailers, terminal `OK`). |
-| `GrpcCallBuilder.Faulted<T>(RpcException)` / `Faulted<T>(StatusCode, string?)` | Builds a faulted `AsyncUnaryCall<T>` surfacing the exception's status and trailers. |
+| `GrpcCallBuilder.Success<T>(T response)` / `Success<T>(T, Metadata?, Metadata?)` *(v0.2.0+)* | Builds a successful `AsyncUnaryCall<T>` (response, optional response headers and trailers, terminal `OK`). The trailers accessor returns a stable instance. |
+| `GrpcCallBuilder.Faulted<T>(RpcException)` / `Faulted<T>(StatusCode, string?)` / `Faulted<T>(StatusCode, string?, Metadata)` *(v0.2.0+)* | Builds a faulted `AsyncUnaryCall<T>` surfacing the exception's status and trailers. |
 | `GrpcExceptions.IsRpcException(Exception?)` | `true` when the argument is a gRPC `RpcException`; `false` for `null` or any other type. |
 | `GrpcOutcomeRendering.Describe(RpcException)` | Renders `RpcException with StatusCode X, Detail "..."` for failure messages. |
 
@@ -245,6 +248,21 @@ await Assert.That(caught!).IsSameReferenceAs(thrown);
 ```
 
 The point is that the exact instance propagated unchanged: same status, same trailers, same stack, no re-wrapping. Use `ThrowsGrpcException(code)` when you care that the *status* is correct; keep `Throws<RpcException>()` + `IsSameReferenceAs` when you care that the *instance* is preserved.
+
+### Await the call against a generated client
+
+The delegate forms in this README assume `client` is a wrapper whose method returns a `Task` (or `Task<T>`), which the assertion awaits. A *generated* gRPC client is different: its `XAsync` method returns `AsyncUnaryCall<T>`, and the failure lives in the call's `ResponseAsync`, not in constructing the call. A delegate that just returns the call is not awaited, so the fault never surfaces: `ThrowsGrpcException` reports "no exception was thrown" and `DoesNotThrowGrpcException` passes for the wrong reason.
+
+```csharp
+// Footgun: the AsyncUnaryCall is returned but never awaited, so a faulted call looks like success.
+await Assert.That(() => generatedClient.GetOrderAsync(request)).ThrowsGrpcException();
+
+// Correct: await the call, or assert on its ResponseAsync.
+await Assert.That(async () => await generatedClient.GetOrderAsync(request)).ThrowsGrpcException();
+await Assert.That(() => generatedClient.GetOrderAsync(request).ResponseAsync).ThrowsGrpcException();
+```
+
+This package is built for testing client *wrappers* (which return `Task`), so the wrapper examples above need no change; the note matters only when you assert directly against a raw generated client.
 
 **Assert a specific failure, status and detail in one chain:**
 

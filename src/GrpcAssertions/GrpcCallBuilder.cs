@@ -23,14 +23,32 @@ public static class GrpcCallBuilder
     /// <returns>A completed, successful <see cref="AsyncUnaryCall{TResponse}"/>.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="response"/> is null.</exception>
     public static AsyncUnaryCall<TResponse> Success<TResponse>(TResponse response)
+        => Success(response, responseHeaders: null, trailers: null);
+
+    /// <summary>
+    /// Builds a successful <see cref="AsyncUnaryCall{TResponse}"/> that completes with
+    /// <paramref name="response"/> and the supplied response headers and trailers, and a terminal
+    /// <see cref="StatusCode.OK"/> status. A null <paramref name="responseHeaders"/> or
+    /// <paramref name="trailers"/> is treated as empty metadata. The trailers accessor returns the
+    /// same <see cref="Metadata"/> instance on every call, matching a real client.
+    /// </summary>
+    /// <typeparam name="TResponse">The gRPC response message type.</typeparam>
+    /// <param name="response">The response the call completes with. Must not be null.</param>
+    /// <param name="responseHeaders">The response headers, or null for empty headers.</param>
+    /// <param name="trailers">The response trailers, or null for empty trailers.</param>
+    /// <returns>A completed, successful <see cref="AsyncUnaryCall{TResponse}"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="response"/> is null.</exception>
+    public static AsyncUnaryCall<TResponse> Success<TResponse>(TResponse response, Metadata? responseHeaders, Metadata? trailers)
     {
         ArgumentNullException.ThrowIfNull(response);
 
+        var headers = responseHeaders ?? new Metadata();
+        var callTrailers = trailers ?? new Metadata();
         return new AsyncUnaryCall<TResponse>(
             Task.FromResult(response),
-            Task.FromResult(new Metadata()),
+            Task.FromResult(headers),
             static () => new Status(StatusCode.OK, string.Empty),
-            static () => new Metadata(),
+            () => callTrailers,
             static () => { });
     }
 
@@ -67,4 +85,22 @@ public static class GrpcCallBuilder
     /// <returns>A faulted <see cref="AsyncUnaryCall{TResponse}"/>.</returns>
     public static AsyncUnaryCall<TResponse> Faulted<TResponse>(StatusCode statusCode, string? detail = null)
         => Faulted<TResponse>(new RpcException(new Status(statusCode, detail ?? string.Empty)));
+
+    /// <summary>
+    /// Builds a faulted <see cref="AsyncUnaryCall{TResponse}"/> from a status code, detail, and
+    /// response <paramref name="trailers"/>. The trailers are attached to the constructed
+    /// <see cref="RpcException"/>, so they surface through the call's trailers accessor and through
+    /// <see cref="RpcException.Trailers"/> on the thrown exception.
+    /// </summary>
+    /// <typeparam name="TResponse">The gRPC response message type.</typeparam>
+    /// <param name="statusCode">The gRPC status code to fault with.</param>
+    /// <param name="detail">The status detail message. A null value is treated as an empty string.</param>
+    /// <param name="trailers">The response trailers to attach. Must not be null.</param>
+    /// <returns>A faulted <see cref="AsyncUnaryCall{TResponse}"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="trailers"/> is null.</exception>
+    public static AsyncUnaryCall<TResponse> Faulted<TResponse>(StatusCode statusCode, string? detail, Metadata trailers)
+    {
+        ArgumentNullException.ThrowIfNull(trailers);
+        return Faulted<TResponse>(new RpcException(new Status(statusCode, detail ?? string.Empty), trailers));
+    }
 }
