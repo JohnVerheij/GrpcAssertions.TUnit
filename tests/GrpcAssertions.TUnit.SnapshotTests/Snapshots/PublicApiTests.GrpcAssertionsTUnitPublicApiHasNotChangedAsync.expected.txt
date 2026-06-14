@@ -39,6 +39,16 @@ namespace GrpcAssertions.TUnit
         [TUnit.Assertions.Attributes.GenerateAssertion]
         public static TUnit.Assertions.Core.AssertionResult IsRpcException(this System.Exception value) { }
     }
+    public sealed class ServerStreamAssertion<TResponse> : TUnit.Assertions.Core.Assertion<Grpc.Core.AsyncServerStreamingCall<TResponse>>
+    {
+        public ServerStreamAssertion(TUnit.Assertions.Core.AssertionContext<Grpc.Core.AsyncServerStreamingCall<TResponse>> context, System.Threading.CancellationToken cancellationToken) { }
+        public GrpcAssertions.TUnit.ServerStreamAssertion<TResponse> AndStreamItems(System.Func<System.Collections.Generic.IReadOnlyList<TResponse>, System.Threading.Tasks.Task> assertions) { }
+        protected override System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> CheckAsync(TUnit.Assertions.Core.EvaluationMetadata<Grpc.Core.AsyncServerStreamingCall<TResponse>> metadata) { }
+        protected override string GetExpectation() { }
+        public GrpcAssertions.TUnit.ServerStreamAssertion<TResponse> StreamContains(System.Func<TResponse, bool> predicate, [System.Runtime.CompilerServices.CallerArgumentExpression("predicate")] string? predicateExpression = null) { }
+        public GrpcAssertions.TUnit.ServerStreamAssertion<TResponse> StreamsAtLeast(int count) { }
+        public GrpcAssertions.TUnit.ServerStreamAssertion<TResponse> StreamsExactly(int count) { }
+    }
 }
 namespace TUnit.Assertions.Extensions
 {
@@ -53,6 +63,10 @@ namespace TUnit.Assertions.Extensions
         public static GrpcAssertions.TUnit.GrpcDoesNotThrowAssertion<TValue> DoesNotThrowGrpcException<TValue>(this TUnit.Assertions.Core.IDelegateAssertionSource<TValue> source) { }
         public static GrpcAssertions.TUnit.GrpcExceptionAssertion ThrowsGrpcException<TValue>(this TUnit.Assertions.Core.IDelegateAssertionSource<TValue> source) { }
         public static GrpcAssertions.TUnit.GrpcExceptionAssertion ThrowsGrpcException<TValue>(this TUnit.Assertions.Core.IDelegateAssertionSource<TValue> source, Grpc.Core.StatusCode expected) { }
+    }
+    public static class GrpcServerStreamAssertionExtensions
+    {
+        public static GrpcAssertions.TUnit.ServerStreamAssertion<TResponse> Streams<TResponse>(this TUnit.Assertions.Core.IAssertionSource<Grpc.Core.AsyncServerStreamingCall<TResponse>> source, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public static class RpcExceptionAssertions
     {

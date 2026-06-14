@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Grpc.Core;
 
@@ -102,5 +104,69 @@ public static class GrpcCallBuilder
     {
         ArgumentNullException.ThrowIfNull(trailers);
         return Faulted<TResponse>(new RpcException(new Status(statusCode, detail ?? string.Empty), trailers));
+    }
+
+    /// <summary>
+    /// Builds a successful <see cref="AsyncServerStreamingCall{TResponse}"/> whose response stream
+    /// yields <paramref name="responses"/> in order and then ends cleanly with a terminal
+    /// <see cref="StatusCode.OK"/> status: the server-streaming shape a generated gRPC client
+    /// returns on success.
+    /// </summary>
+    /// <typeparam name="TResponse">The gRPC response message type.</typeparam>
+    /// <param name="responses">The responses the stream yields, in order. Must not be null; an empty
+    /// sequence produces a stream that ends immediately.</param>
+    /// <returns>A successful <see cref="AsyncServerStreamingCall{TResponse}"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="responses"/> is null.</exception>
+    public static AsyncServerStreamingCall<TResponse> ServerStreaming<TResponse>(IEnumerable<TResponse> responses)
+    {
+        ArgumentNullException.ThrowIfNull(responses);
+        return BuildServerStreaming(responses, fault: null);
+    }
+
+    /// <summary>
+    /// Builds an <see cref="AsyncServerStreamingCall{TResponse}"/> whose response stream yields
+    /// <paramref name="responses"/> in order and then throws an <see cref="RpcException"/> on the
+    /// next read: the partial-stream-then-error shape that exercises a wrapper's mid-stream fault
+    /// handling.
+    /// </summary>
+    /// <typeparam name="TResponse">The gRPC response message type.</typeparam>
+    /// <param name="statusCode">The gRPC status code the stream faults with after the responses.</param>
+    /// <param name="responses">The responses yielded before the fault, in order. Must not be null; an
+    /// empty sequence faults on the first read.</param>
+    /// <param name="detail">The status detail message. A null value is treated as an empty string.</param>
+    /// <returns>A faulted-after-<paramref name="responses"/> <see cref="AsyncServerStreamingCall{TResponse}"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="responses"/> is null.</exception>
+    public static AsyncServerStreamingCall<TResponse> ServerStreamingFaulted<TResponse>(
+        StatusCode statusCode,
+        IEnumerable<TResponse> responses,
+        string? detail = null)
+    {
+        ArgumentNullException.ThrowIfNull(responses);
+        return BuildServerStreaming(responses, new RpcException(new Status(statusCode, detail ?? string.Empty)));
+    }
+
+    /// <summary>Constructs the server-streaming call from a materialized response list and an optional
+    /// terminal fault, mirroring the five-parameter shape a real client exposes.</summary>
+    /// <typeparam name="TResponse">The gRPC response message type.</typeparam>
+    /// <param name="responses">The responses to yield.</param>
+    /// <param name="fault">The exception to throw after the responses, or null to end cleanly.</param>
+    /// <returns>The constructed call.</returns>
+    private static AsyncServerStreamingCall<TResponse> BuildServerStreaming<TResponse>(IEnumerable<TResponse> responses, RpcException? fault)
+    {
+        var items = responses as IReadOnlyList<TResponse> ?? responses.ToList();
+        var reader = new FakeAsyncStreamReader<TResponse>(items, fault);
+        Func<Status> getStatus = fault is not null
+            ? () => fault.Status
+            : static () => new Status(StatusCode.OK, string.Empty);
+        Func<Metadata> getTrailers = fault is not null
+            ? () => fault.Trailers
+            : static () => new Metadata();
+
+        return new AsyncServerStreamingCall<TResponse>(
+            reader,
+            Task.FromResult(new Metadata()),
+            getStatus,
+            getTrailers,
+            static () => { });
     }
 }

@@ -9,6 +9,8 @@ namespace GrpcAssertions
         public static Grpc.Core.AsyncUnaryCall<TResponse> Faulted<TResponse>(Grpc.Core.RpcException exception) { }
         public static Grpc.Core.AsyncUnaryCall<TResponse> Faulted<TResponse>(Grpc.Core.StatusCode statusCode, string? detail = null) { }
         public static Grpc.Core.AsyncUnaryCall<TResponse> Faulted<TResponse>(Grpc.Core.StatusCode statusCode, string? detail, Grpc.Core.Metadata trailers) { }
+        public static Grpc.Core.AsyncServerStreamingCall<TResponse> ServerStreaming<TResponse>(System.Collections.Generic.IEnumerable<TResponse> responses) { }
+        public static Grpc.Core.AsyncServerStreamingCall<TResponse> ServerStreamingFaulted<TResponse>(Grpc.Core.StatusCode statusCode, System.Collections.Generic.IEnumerable<TResponse> responses, string? detail = null) { }
         public static Grpc.Core.AsyncUnaryCall<TResponse> Success<TResponse>(TResponse response) { }
         public static Grpc.Core.AsyncUnaryCall<TResponse> Success<TResponse>(TResponse response, Grpc.Core.Metadata? responseHeaders, Grpc.Core.Metadata? trailers) { }
     }
