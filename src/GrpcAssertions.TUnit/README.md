@@ -17,10 +17,11 @@ Delegate assertions on `Assert.That(() => client.Method(...))`:
 | `ThrowsGrpcException()` / `ThrowsGrpcException(StatusCode)` | Asserts the call throws an `RpcException` (optionally with a status). Returns a chain. |
 | `DoesNotThrowGrpcException()` | Asserts the call completes without throwing an `RpcException`. |
 | `IsRpcException()` (on a caught `Exception`) | Asserts the exception is a gRPC `RpcException`. |
+| `Streams()` (on an `AsyncServerStreamingCall<T>`) *(v0.3.0+)* | Asserts on a server-streaming call's responses. Returns a chain. |
 
-Chain off `ThrowsGrpcException()`: 14 `StatusCode` shorthands (`IsUnavailable()`, `IsNotFound()`, and the rest), plus `WithDetail(string)` and `WithDetailContaining(string, StringComparison)`.
+Chain off `ThrowsGrpcException()`: 14 `StatusCode` shorthands (`IsUnavailable()`, `IsNotFound()`, and the rest), plus `WithDetail(string)`, `WithDetailContaining(string, StringComparison)`, and `WithTrailer(...)`. Chain off `Streams()`: `StreamsAtLeast(int)`, `StreamsExactly(int)`, `StreamContains(Func<T, bool>)`, and `AndStreamItems(Func<IReadOnlyList<T>, Task>)`.
 
-The framework-agnostic core (`GrpcAssertions`) also ships the `GrpcCallBuilder` test-double helper for building `AsyncUnaryCall<T>` fakes. `Success<T>(T)` infers `T` from its argument; `Faulted<T>(RpcException)` needs the explicit `T`. The [GitHub README](https://github.com/JohnVerheij/GrpcAssertions.TUnit#cookbook-common-patterns) has a before/after recipe for replacing hand-rolled `AsyncUnaryCall<T>` factories, and guidance on when *not* to migrate a test to `ThrowsGrpcException`.
+The framework-agnostic core (`GrpcAssertions`) also ships the `GrpcCallBuilder` test-double helper for building `AsyncUnaryCall<T>` fakes (`Success<T>` / `Faulted<T>`) and, since v0.3.0, `AsyncServerStreamingCall<T>` fakes (`ServerStreaming<T>` / `ServerStreamingFaulted<T>`). `Success<T>(T)` infers `T` from its argument; `Faulted<T>(RpcException)` needs the explicit `T`. The [GitHub README](https://github.com/JohnVerheij/GrpcAssertions.TUnit#cookbook-common-patterns) has a before/after recipe for replacing hand-rolled `AsyncUnaryCall<T>` factories, and guidance on when *not* to migrate a test to `ThrowsGrpcException`.
 
 ## Install
 

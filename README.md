@@ -135,12 +135,23 @@ Exception discriminator, on a caught `Exception`:
 |---|---|
 | `IsRpcException()` | Asserts the exception is a gRPC `RpcException`. The failure message names the actual exception type. |
 
+Server-streaming assertions *(v0.3.0+)*, on `Assert.That(call)` where `call` is an `AsyncServerStreamingCall<T>`:
+
+| Entry point / chain method | Behavior |
+|---|---|
+| `Streams(CancellationToken = default)` | Begins a server-streaming assertion. Reads the response stream once when awaited; returns a chain. A stream that faults mid-read fails with the partial count and the rendered gRPC outcome. |
+| `StreamsAtLeast(int)` / `StreamsExactly(int)` | Assert the response count is at least / exactly the given value. |
+| `StreamContains(Func<T, bool>)` | Assert at least one streamed response matches the predicate. The predicate's source text is captured for the failure message. |
+| `AndStreamItems(Func<IReadOnlyList<T>, Task>)` | Run follow-on assertions against the materialized responses after the count and content expectations pass, without re-reading the stream. |
+
 Framework-agnostic core (`GrpcAssertions` namespace), for test doubles and non-TUnit consumers:
 
 | Core API | Behavior |
 |---|---|
 | `GrpcCallBuilder.Success<T>(T response)` / `Success<T>(T, Metadata?, Metadata?)` *(v0.2.0+)* | Builds a successful `AsyncUnaryCall<T>` (response, optional response headers and trailers, terminal `OK`). The trailers accessor returns a stable instance. |
 | `GrpcCallBuilder.Faulted<T>(RpcException)` / `Faulted<T>(StatusCode, string?)` / `Faulted<T>(StatusCode, string?, Metadata)` *(v0.2.0+)* | Builds a faulted `AsyncUnaryCall<T>` surfacing the exception's status and trailers. |
+| `GrpcCallBuilder.ServerStreaming<T>(IEnumerable<T> responses)` *(v0.3.0+)* | Builds a successful `AsyncServerStreamingCall<T>` whose response stream yields the responses in order then ends with a terminal `OK`. |
+| `GrpcCallBuilder.ServerStreamingFaulted<T>(StatusCode, IEnumerable<T> responses, string? detail = null)` *(v0.3.0+)* | Builds an `AsyncServerStreamingCall<T>` that yields the responses then throws an `RpcException` on the next read. |
 | `GrpcExceptions.IsRpcException(Exception?)` | `true` when the argument is a gRPC `RpcException`; `false` for `null` or any other type. |
 | `GrpcOutcomeRendering.Describe(RpcException)` | Renders `RpcException with StatusCode X, Detail "..."` for failure messages. |
 
@@ -319,8 +330,6 @@ Every release through 1.0 is **additive**. The public API of both assemblies is 
 
 Scoped to what real consumer suites use; later minor releases add surface as demand appears. All additive.
 
-- **0.2.0**: trailer assertions (`HasTrailer`, `DoesNotHaveTrailer`, `HasTrailerCount`), response-header metadata assertions, `WithoutDetail()`, and `IsNotStatusCode(StatusCode)`.
-- **0.3.0**: server-streaming assertions (`StreamsAtLeast`, `StreamsExactly`, `StreamContains`, `AndStreamItems<T>`).
 - **0.4.0**: deadline and cancellation assertions (`ThrowsDeadlineExceeded`, `ThrowsCancelled`, `CompletesWithin(TimeSpan, TimeProvider)` per the cross-family `TimeProvider` convention).
 - **1.0.0**: stable SemVer contract, full snapshot coverage, and an optional `GrpcAssertions.Analyzers` package.
 
