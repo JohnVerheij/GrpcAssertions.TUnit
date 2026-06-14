@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-06-14: server-streaming builders and assertions
+
+Minor release. Extends the builder and the assertion surface from unary calls to server-streaming calls: `GrpcCallBuilder` now constructs `AsyncServerStreamingCall<T>` test doubles, and a `Streams()` chain asserts on the streamed responses. Purely additive; the `0.2.0` ApiCompat baseline is preserved.
+
+### Added
+
+- **`GrpcCallBuilder.ServerStreaming<TResponse>(IEnumerable<TResponse> responses)`** builds a successful server-streaming call whose response stream yields the responses in order and then ends cleanly with a terminal `StatusCode.OK`.
+- **`GrpcCallBuilder.ServerStreamingFaulted<TResponse>(StatusCode statusCode, IEnumerable<TResponse> responses, string? detail = null)`** builds a server-streaming call that yields the responses and then throws an `RpcException` on the next read, so a wrapper's mid-stream fault handling can be exercised.
+- **`Streams()`** on an `AsyncServerStreamingCall<TResponse>` begins a server-streaming assertion that reads the response stream once. Chain **`StreamsAtLeast(int)`** / **`StreamsExactly(int)`** to assert the response count, **`StreamContains(Func<TResponse, bool>)`** to assert at least one response matches (the predicate text is captured for the failure message), and **`AndStreamItems(Func<IReadOnlyList<TResponse>, Task>)`** to run follow-on assertions against the materialized responses without re-reading the stream. A stream that faults mid-read fails with the partial count and the rendered gRPC outcome.
+
 ## [0.2.0] - 2026-06-12: response and trailer metadata on the builder, trailer assertions
 
 Minor release. Lets a faked call carry response headers and trailers, and adds trailer assertions (text and binary) to the `RpcException` chain. Purely additive.
@@ -73,7 +83,9 @@ Skeleton release. Establishes the repository, the `GrpcAssertions` (core) and `G
 - Single disclosed runtime dependency: `Grpc.Core.Api` (Apache-2.0), the package that defines the `RpcException` / `StatusCode` / `Status` types the assertions are about. It flows transitively to consumers through the core package.
 - Repository scaffolding at the family quality bar: central package management, shared `Directory.Build.props` / `.targets`, `BannedSymbols.txt` no-reflection enforcement, CI (build / test / pack, CodeQL across `csharp` and `actions`, OpenSSF Scorecard, dependency-review, the zizmor workflow audit), Renovate dependency automation, SLSA build-provenance plus Sigstore-signed SBOM attestations on release, and a public-API snapshot test pinning both shipped assemblies.
 
-[unreleased]: https://github.com/JohnVerheij/GrpcAssertions.TUnit/compare/v0.1.2...HEAD
+[unreleased]: https://github.com/JohnVerheij/GrpcAssertions.TUnit/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/JohnVerheij/GrpcAssertions.TUnit/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/JohnVerheij/GrpcAssertions.TUnit/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/JohnVerheij/GrpcAssertions.TUnit/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/JohnVerheij/GrpcAssertions.TUnit/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/JohnVerheij/GrpcAssertions.TUnit/compare/v0.0.1...v0.1.0
