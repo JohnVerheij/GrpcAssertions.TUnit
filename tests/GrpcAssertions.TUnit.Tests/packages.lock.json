@@ -135,7 +135,7 @@
       "grpcassertions.tunit": {
         "type": "Project",
         "dependencies": {
-          "GrpcAssertions": "[0.2.0, )",
+          "GrpcAssertions": "[0.3.0, )",
           "TUnit.Assertions": "[1.54.0, )",
           "TUnit.Core": "[1.54.0, )"
         }
