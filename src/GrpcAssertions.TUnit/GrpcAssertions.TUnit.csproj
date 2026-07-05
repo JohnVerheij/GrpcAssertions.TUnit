@@ -15,7 +15,7 @@
     <Authors>John Verheij</Authors>
     <Copyright>Copyright (c) 2026 John Verheij</Copyright>
     <Description>TUnit-native gRPC assertions for .NET tests. Fluent ThrowsGrpcException / DoesNotThrowGrpcException on a delegate, with StatusCode shorthands (IsUnavailable, IsNotFound, and the rest) and WithDetail / WithDetailContaining refinements, plus the IsRpcException discriminator and the GrpcCallBuilder test-double helper from the framework-agnostic core. AOT-compatible, trimmable, no runtime reflection in the assertion path.</Description>
-    <PackageTags>tunit;grpc;rpc;testing;assertions;dotnet;aot</PackageTags>
+    <PackageTags>tunit;assertions;testing;grpc;rpc;dotnet;aot</PackageTags>
     <PackageProjectUrl>https://github.com/JohnVerheij/GrpcAssertions.TUnit</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>

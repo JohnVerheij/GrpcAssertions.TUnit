@@ -15,7 +15,7 @@
     <Authors>John Verheij</Authors>
     <Copyright>Copyright (c) 2026 John Verheij</Copyright>
     <Description>Framework-agnostic core for gRPC assertions in .NET test projects. Provides the GrpcCallBuilder test-double helper (Success and Faulted AsyncUnaryCall builders), gRPC outcome rendering for failure messages, and RpcException predicates, over the single Grpc.Core.Api dependency (the RpcException / StatusCode / Status types the assertions are about). Test-framework-specific assertion entry points live in adapter packages (GrpcAssertions.TUnit ships today; xUnit, NUnit, MSTest adapters are possible if there is demand). AOT-compatible, trimmable, no runtime reflection.</Description>
-    <PackageTags>grpc;rpc;testing;assertions;dotnet;aot</PackageTags>
+    <PackageTags>assertions;testing;grpc;rpc;dotnet;aot</PackageTags>
     <PackageProjectUrl>https://github.com/JohnVerheij/GrpcAssertions.TUnit</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
