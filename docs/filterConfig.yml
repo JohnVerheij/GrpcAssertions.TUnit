@@ -1,5 +1,5 @@
 apiRules:
-- include:
-    uidRegex: ^GrpcAssertions(\.TUnit)?(\..+)?$
 - exclude:
     uidRegex: .*\.Internal\..*
+- include:
+    uidRegex: ^GrpcAssertions(\.TUnit)?(\..+)?$
