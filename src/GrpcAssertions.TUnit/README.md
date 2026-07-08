@@ -6,6 +6,8 @@
 
 > **Scope:** Test projects only. Not intended for production code.
 
+> Part of the **[DotNetAssertions](https://dotnetassertions.dev)** family of assertion extensions for TUnit.
+
 TUnit-native gRPC assertions for .NET tests. Fluent entry points over TUnit's `Assert.That(...)` pipeline for asserting on gRPC call outcomes. AOT-compatible, trimmable, no runtime reflection in the assertion path.
 
 ## What ships

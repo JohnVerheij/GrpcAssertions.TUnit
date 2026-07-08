@@ -6,6 +6,8 @@
 
 > **Scope:** Test projects only. Not intended for production code.
 
+> Part of the **[DotNetAssertions](https://dotnetassertions.dev)** family. This is the framework-agnostic core; the TUnit assertions live in the matching `.TUnit` package.
+
 Framework-agnostic core for the GrpcAssertions package family. The TUnit-native fluent assertion entry points ship in the adapter package [`GrpcAssertions.TUnit`](https://www.nuget.org/packages/GrpcAssertions.TUnit/).
 
 > **Most users want [`GrpcAssertions.TUnit`](https://www.nuget.org/packages/GrpcAssertions.TUnit/), not this package directly.** Install this core directly only when authoring a non-TUnit adapter or when you only need the test-double builder and predicates.
