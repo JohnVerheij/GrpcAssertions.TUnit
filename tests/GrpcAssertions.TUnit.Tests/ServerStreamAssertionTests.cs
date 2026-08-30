@@ -172,7 +172,7 @@ internal sealed class ServerStreamAssertionTests
     public async Task Streams_NullSource_ThrowsArgumentNull(CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
-        await Assert.That(() => GrpcServerStreamAssertionExtensions.Streams<string>(null!))
+        await Assert.That(() => GrpcServerStreamAssertionExtensions.Streams<string>(null!, ct))
             .Throws<ArgumentNullException>();
     }
 }

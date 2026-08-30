@@ -38,7 +38,7 @@ internal sealed class RpcExceptionAssertionsTests
     {
         ct.ThrowIfCancellationRequested();
         Exception nullException = null!;
-        await Assert.That(async () => await Task.Run(() => nullException.IsRpcException()))
+        await Assert.That(async () => await Task.Run(() => nullException.IsRpcException(), ct))
             .Throws<ArgumentNullException>();
     }
 }
