@@ -46,9 +46,7 @@ public static class GrpcDelegateAssertionExtensions
         return new GrpcExceptionAssertion(source.Context.MapException<RpcException>(), expected);
     }
 
-    /// <summary>
-    /// Asserts that the delegate completes without throwing a gRPC <see cref="RpcException"/>.
-    /// </summary>
+    /// <summary>Asserts that the delegate completes without throwing a gRPC <see cref="RpcException"/>.</summary>
     /// <typeparam name="TValue">The evaluated value type of the delegate under assertion.</typeparam>
     /// <param name="source">The delegate assertion source.</param>
     /// <returns>A <see cref="GrpcDoesNotThrowAssertion{TValue}"/>.</returns>
