@@ -3,6 +3,7 @@
 [![CI](https://github.com/JohnVerheij/GrpcAssertions.TUnit/actions/workflows/ci.yml/badge.svg)](https://github.com/JohnVerheij/GrpcAssertions.TUnit/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/JohnVerheij/GrpcAssertions.TUnit/actions/workflows/codeql.yml/badge.svg)](https://github.com/JohnVerheij/GrpcAssertions.TUnit/actions/workflows/codeql.yml)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/JohnVerheij/GrpcAssertions.TUnit/badge)](https://scorecard.dev/viewer/?uri=github.com/JohnVerheij/GrpcAssertions.TUnit)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16138/badge)](https://www.bestpractices.dev/projects/16138)
 [![codecov](https://codecov.io/gh/JohnVerheij/GrpcAssertions.TUnit/branch/main/graph/badge.svg)](https://codecov.io/gh/JohnVerheij/GrpcAssertions.TUnit)
 [![NuGet](https://img.shields.io/nuget/v/GrpcAssertions.TUnit.svg)](https://www.nuget.org/packages/GrpcAssertions.TUnit/)
 [![Downloads](https://img.shields.io/nuget/dt/GrpcAssertions.TUnit.svg)](https://www.nuget.org/packages/GrpcAssertions.TUnit/)
