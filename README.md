@@ -25,6 +25,7 @@ TUnit-native gRPC assertions for .NET tests. Fluent entry points over TUnit's `A
 - [Package layout](#package-layout)
 - [Namespaces (and a `GlobalUsings.cs` recommendation)](#namespaces-and-a-globalusingscs-recommendation)
 - [Quick start](#quick-start)
+- [Worked example: a client wrapper over a fake client](#worked-example-a-client-wrapper-over-a-fake-client)
 - [Entry points](#entry-points)
 - [Failure diagnostics](#failure-diagnostics)
 - [Cookbook: common patterns](#cookbook-common-patterns)
@@ -111,6 +112,90 @@ await Assert.That(() => client.CancelOrderAsync(request, ct))
 var ok = GrpcCallBuilder.Success(new OrderReply());
 var bad = GrpcCallBuilder.Faulted<OrderReply>(StatusCode.NotFound, "no such order");
 ```
+
+## Worked example: a client wrapper over a fake client
+
+The code under test wraps a generated client: it returns the customer of an order, treats `NotFound`
+as "no such order", and lets every other failure through.
+
+```csharp
+public sealed class OrderLookup(Orders.OrdersClient client)
+{
+    public async Task<string?> FindCustomerAsync(int orderId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var reply = await client.GetOrderAsync(
+                new OrderRequest { Id = orderId }, cancellationToken: cancellationToken);
+            return reply.Customer;
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.NotFound)
+        {
+            return null;
+        }
+    }
+}
+```
+
+The fake derives from the generated client, which has a protected parameterless constructor for test
+doubles. Every convenience overload of a generated method calls its `CallOptions` overload, so the
+fake overrides only that one and returns a call built by `GrpcCallBuilder`:
+
+```csharp
+internal sealed class FakeOrdersClient(AsyncUnaryCall<OrderReply> call) : Orders.OrdersClient
+{
+    public override AsyncUnaryCall<OrderReply> GetOrderAsync(OrderRequest request, CallOptions options)
+        => call;
+}
+```
+
+One test per outcome:
+
+```csharp
+[Test]
+public async Task FindCustomer_ReturnsTheCustomerOfTheOrder(CancellationToken ct)
+{
+    var lookup = new OrderLookup(new FakeOrdersClient(
+        GrpcCallBuilder.Success(new OrderReply { Customer = "ada" })));
+
+    await Assert.That(await lookup.FindCustomerAsync(42, ct)).IsEqualTo("ada");
+}
+
+[Test]
+public async Task FindCustomer_TreatsNotFoundAsNoCustomer(CancellationToken ct)
+{
+    var lookup = new OrderLookup(new FakeOrdersClient(
+        GrpcCallBuilder.Faulted<OrderReply>(StatusCode.NotFound, "no such order")));
+
+    var customer = await Assert.That(() => lookup.FindCustomerAsync(42, ct))
+        .DoesNotThrowGrpcException();
+
+    await Assert.That(customer).IsNull();
+}
+
+[Test]
+public async Task FindCustomer_LetsOtherFailuresThrough(CancellationToken ct)
+{
+    var lookup = new OrderLookup(new FakeOrdersClient(
+        GrpcCallBuilder.Faulted<OrderReply>(StatusCode.Unavailable, "connection refused")));
+
+    await Assert.That(() => lookup.FindCustomerAsync(42, ct))
+        .ThrowsGrpcException(StatusCode.Unavailable)
+        .WithDetailContaining("connection refused", StringComparison.Ordinal);
+}
+```
+
+The wrapper awaits the call, so `() => lookup.FindCustomerAsync(...)` returns a `Task` that the
+assertion awaits. Against the fake or a generated client directly, write
+`async () => await client.GetOrderAsync(...)`: an `AsyncUnaryCall<T>` that is returned but not awaited
+hides the fault ([details](#await-the-call-against-a-generated-client)).
+
+**Coming from the ASP.NET Core docs?** [Mock a gRPC client](https://learn.microsoft.com/aspnet/core/grpc/test-client)
+builds the call with `CallHelpers.CreateAsyncUnaryCall`, an `internal` helper from the grpc-dotnet
+examples that each test project copies. `GrpcCallBuilder.Success(response)` and
+`GrpcCallBuilder.Faulted<T>(statusCode)` are the packaged equivalents, with detail, headers, trailers
+and server streaming on top, and they work with a mocking library the same way:
+`.Returns(GrpcCallBuilder.Success(new HelloReply { Message = "Test" }))`.
 
 ## Entry points
 
@@ -359,7 +444,7 @@ For per-package release notes:
 - **[`MathAssertions.TUnit`](https://www.nuget.org/packages/MathAssertions.TUnit/)**: tolerance-aware fluent assertions over numeric and geometric types (vectors, quaternions, matrices, planes, complex numbers, arrays).
 - **[`JsonAssertions.TUnit`](https://www.nuget.org/packages/JsonAssertions.TUnit/)**: fluent JSON assertions over `System.Text.Json`, HTTP response bodies (including RFC 7807 ProblemDetails), and source-generated `JsonSerializerContext` registration.
 - **[`SseAssertions.TUnit`](https://www.nuget.org/packages/SseAssertions.TUnit/)**: Server-Sent Events wire-format and stream assertions over HTTP response bodies, streams, and strings.
-- **[`TracingAssertions.TUnit`](https://www.nuget.org/packages/TracingAssertions.TUnit/)**: fluent OpenTelemetry distributed-tracing (`Activity` / span) assertions: operation name, tags, status, and parent/child and same-trace relationships, captured via a raw `ActivityListener` with no OpenTelemetry SDK dependency.
+- **[`TracingAssertions.TUnit`](https://www.nuget.org/packages/TracingAssertions.TUnit/)**: fluent OpenTelemetry distributed-tracing (`Activity` / span) assertions: operation name, tags, status, kind, events, and parent/child, root and same-trace relationships, captured via a raw `ActivityListener` with no OpenTelemetry SDK dependency.
 - **[`MetricsAssertions.TUnit`](https://www.nuget.org/packages/MetricsAssertions.TUnit/)**: fluent assertions over `System.Diagnostics.Metrics` instruments (counters, histograms, gauges), built on `MetricCollector`.
 
 ## Contributing

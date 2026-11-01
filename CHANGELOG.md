@@ -15,6 +15,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-01: worked example for a client wrapper
+
+Patch release. No API or behavior change.
+
+### Changed
+
+- **README:** a worked example that tests a client wrapper over a fake generated client, one test per outcome (success, a swallowed `NotFound`, a failure that passes through), with the reminder that a delegate over a raw `AsyncUnaryCall<T>` must await it; and a note for readers of the ASP.NET Core docs that `GrpcCallBuilder.Success` and `Faulted` replace the copied `CallHelpers` helper.
+- **NuGet descriptions** of both packages list the trailer and server-streaming surface.
+- **`TUnit.Assertions`** and **`TUnit.Core`** minimum versions raised from 1.54.0 to 1.77.0, and **`Grpc.Core.Api`** from 2.80.0 to 2.85.0.
+
 ## [0.3.0] - 2026-06-14: server-streaming builders and assertions
 
 Minor release. Extends the builder and the assertion surface from unary calls to server-streaming calls: `GrpcCallBuilder` now constructs `AsyncServerStreamingCall<T>` test doubles, and a `Streams()` chain asserts on the streamed responses. Purely additive; the `0.2.0` ApiCompat baseline is preserved.
@@ -79,7 +89,8 @@ Skeleton release. Establishes the repository, the `GrpcAssertions` (core) and `G
 - **`GrpcExceptions.IsRpcException(Exception?)`** framework-agnostic predicate in the `GrpcAssertions` core package. Returns `false` for `null` and for any non-`RpcException` type. The adapter assertion is a thin wrapper over this helper, so a future xUnit, NUnit, or MSTest adapter reuses the same logic.
 - Single disclosed runtime dependency: `Grpc.Core.Api` (Apache-2.0), the package that defines the `RpcException` / `StatusCode` / `Status` types the assertions are about. It flows transitively to consumers through the core package.
 
-[unreleased]: https://github.com/JohnVerheij/GrpcAssertions.TUnit/compare/v0.3.0...HEAD
+[unreleased]: https://github.com/JohnVerheij/GrpcAssertions.TUnit/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/JohnVerheij/GrpcAssertions.TUnit/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/JohnVerheij/GrpcAssertions.TUnit/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/JohnVerheij/GrpcAssertions.TUnit/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/JohnVerheij/GrpcAssertions.TUnit/compare/v0.1.1...v0.1.2
