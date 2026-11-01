@@ -36,4 +36,36 @@ internal sealed class SmokeTest
 
         await Assert.That(exception).IsRpcException();
     }
+
+    [Test]
+    public async Task WorkedExampleSuccessResolvesAndPasses(CancellationToken cancellationToken)
+    {
+        var lookup = new OrderLookup(new FakeOrdersClient(
+            GrpcCallBuilder.Success(new OrderReply { Customer = "ada" })));
+
+        await Assert.That(await lookup.FindCustomerAsync(42, cancellationToken)).IsEqualTo("ada");
+    }
+
+    [Test]
+    public async Task WorkedExampleSwallowedNotFoundResolvesAndPasses(CancellationToken cancellationToken)
+    {
+        var lookup = new OrderLookup(new FakeOrdersClient(
+            GrpcCallBuilder.Faulted<OrderReply>(StatusCode.NotFound, "no such order")));
+
+        var customer = await Assert.That(() => lookup.FindCustomerAsync(42, cancellationToken))
+            .DoesNotThrowGrpcException();
+
+        await Assert.That(customer).IsNull();
+    }
+
+    [Test]
+    public async Task WorkedExamplePassedThroughFailureResolvesAndPasses(CancellationToken cancellationToken)
+    {
+        var lookup = new OrderLookup(new FakeOrdersClient(
+            GrpcCallBuilder.Faulted<OrderReply>(StatusCode.Unavailable, "connection refused")));
+
+        await Assert.That(() => lookup.FindCustomerAsync(42, cancellationToken))
+            .ThrowsGrpcException(StatusCode.Unavailable)
+            .WithDetailContaining("connection refused", StringComparison.Ordinal);
+    }
 }
