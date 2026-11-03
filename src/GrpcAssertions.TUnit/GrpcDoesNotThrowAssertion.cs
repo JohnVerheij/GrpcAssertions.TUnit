@@ -13,8 +13,8 @@ namespace GrpcAssertions.TUnit;
 /// </summary>
 /// <remarks>
 /// The assertion runs over the raw delegate evaluation, so the thrown exception (if any) is in the
-/// metadata exception field. A thrown <see cref="RpcException"/> fails with the full gRPC outcome
-/// rendered; any other thrown exception fails naming its type and message (the call faulted, which
+/// metadata exception field. A thrown <see cref="RpcException"/> fails with its status code and
+/// detail rendered; any other thrown exception fails naming its type and message (the call faulted, which
 /// the swallow tests do not expect); no exception passes.
 /// </remarks>
 /// <typeparam name="TValue">The evaluated value type of the delegate under assertion.</typeparam>

@@ -4,10 +4,8 @@ using Grpc.Core;
 namespace GrpcAssertions;
 
 /// <summary>
-/// Framework-agnostic predicates over gRPC exceptions. The v0.0.1 surface is intentionally
-/// minimal: it establishes the package, the <c>Grpc.Core.Api</c> dependency, and the quality bar.
-/// The full gRPC outcome-assertion surface (the <c>GrpcCallBuilder</c> test infrastructure plus the
-/// <c>ThrowsGrpcException</c> verbs and <c>StatusCode</c> shorthands) ships in v0.1.0.
+/// Framework-agnostic predicates over gRPC exceptions. Test-framework adapters build their
+/// exception assertions on these, and tests can call them directly.
 /// </summary>
 public static class GrpcExceptions
 {
