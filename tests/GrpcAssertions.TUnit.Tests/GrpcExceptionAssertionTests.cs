@@ -274,6 +274,15 @@ internal sealed class GrpcExceptionAssertionTests
     }
 
     [Test]
+    public async Task DoesNotThrowGrpcException_Awaited_ReturnsTheDelegateResult(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var value = await Assert.That(() => Task.FromResult<string?>("ada")).DoesNotThrowGrpcException();
+
+        await Assert.That(value).IsEqualTo("ada");
+    }
+
+    [Test]
     public async Task DoesNotThrowGrpcException_RpcExceptionThrown_Fails(CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();

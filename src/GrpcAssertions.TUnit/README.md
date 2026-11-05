@@ -17,13 +17,13 @@ Delegate assertions on `Assert.That(() => client.Method(...))`:
 | Entry point | Behavior |
 |---|---|
 | `ThrowsGrpcException()` / `ThrowsGrpcException(StatusCode)` | Asserts the call throws an `RpcException` (optionally with a status). Returns a chain. |
-| `DoesNotThrowGrpcException()` | Asserts the call completes without throwing an `RpcException`. |
+| `DoesNotThrowGrpcException()` | Asserts the call completes without throwing. Any thrown exception fails the assertion. |
 | `IsRpcException()` (on a caught `Exception`) | Asserts the exception is a gRPC `RpcException`. |
 | `Streams()` (on an `AsyncServerStreamingCall<T>`) *(v0.3.0+)* | Asserts on a server-streaming call's responses. Returns a chain. |
 
-Chain off `ThrowsGrpcException()`: 14 `StatusCode` shorthands (`IsUnavailable()`, `IsNotFound()`, and the rest), plus `WithDetail(string)`, `WithDetailContaining(string, StringComparison)`, and `WithTrailer(...)`. Chain off `Streams()`: `StreamsAtLeast(int)`, `StreamsExactly(int)`, `StreamContains(Func<T, bool>)`, and `AndStreamItems(Func<IReadOnlyList<T>, Task>)`.
+Chain off the no-argument `ThrowsGrpcException()`: 14 `StatusCode` shorthands (`IsUnavailable()`, `IsNotFound()`, and the rest; a status can be set once, through the argument or one shorthand, and a second time throws `InvalidOperationException`), plus `WithDetail(string)`, `WithDetailContaining(string, StringComparison)`, and `WithTrailer(...)`. Chain off `Streams()`: `StreamsAtLeast(int)`, `StreamsExactly(int)`, `StreamContains(Func<T, bool>)`, and `AndStreamItems(Func<IReadOnlyList<T>, Task>)`.
 
-The framework-agnostic core (`GrpcAssertions`) also ships the `GrpcCallBuilder` test-double helper for building `AsyncUnaryCall<T>` fakes (`Success<T>` / `Faulted<T>`) and, since v0.3.0, `AsyncServerStreamingCall<T>` fakes (`ServerStreaming<T>` / `ServerStreamingFaulted<T>`). `Success<T>(T)` infers `T` from its argument; `Faulted<T>(RpcException)` needs the explicit `T`. The [GitHub README](https://github.com/JohnVerheij/GrpcAssertions.TUnit#cookbook-common-patterns) has a before/after recipe for replacing hand-rolled `AsyncUnaryCall<T>` factories, and guidance on when *not* to migrate a test to `ThrowsGrpcException`.
+The framework-agnostic core (`GrpcAssertions`) also ships the `GrpcCallBuilder` test-double helper for building `AsyncUnaryCall<T>` fakes (`Success<T>` / `Faulted<T>`) and, since v0.3.0, `AsyncServerStreamingCall<T>` fakes (`ServerStreaming<T>` / `ServerStreamingFaulted<T>`). `Success<T>(T)` infers `T` from its argument; `Faulted<T>(RpcException)` needs the explicit `T`. `Success` and `Faulted` are the packaged equivalents of the `CallHelpers.CreateAsyncUnaryCall` helper that the ASP.NET Core docs copy from the gRPC examples. The [GitHub README](https://github.com/JohnVerheij/GrpcAssertions.TUnit#cookbook-common-patterns) has a before/after recipe for replacing hand-rolled `AsyncUnaryCall<T>` factories, and guidance on when *not* to migrate a test to `ThrowsGrpcException`.
 
 ## Install
 
@@ -44,7 +44,20 @@ await Assert.That(() => client.CancelOrderAsync(request, ct))
     .DoesNotThrowGrpcException();
 ```
 
-The full reference, including the `GrpcCallBuilder` test doubles and the complete shorthand list, is in the [GitHub README](https://github.com/JohnVerheij/GrpcAssertions.TUnit#readme).
+The [worked example](https://github.com/JohnVerheij/GrpcAssertions.TUnit#worked-example-a-client-wrapper-over-a-fake-client) tests a client wrapper over a fake of a generated client, one test per outcome. The full reference, including the `GrpcCallBuilder` test doubles and the complete shorthand list, is in the [GitHub README](https://github.com/JohnVerheij/GrpcAssertions.TUnit#readme).
+
+## Family
+
+Part of an assertion family for TUnit:
+
+- [LogAssertions.TUnit](https://github.com/JohnVerheij/LogAssertions.TUnit)
+- [SnapshotAssertions.TUnit](https://github.com/JohnVerheij/SnapshotAssertions.TUnit)
+- [TimeAssertions.TUnit](https://github.com/JohnVerheij/TimeAssertions.TUnit)
+- [MathAssertions.TUnit](https://github.com/JohnVerheij/MathAssertions.TUnit)
+- [JsonAssertions.TUnit](https://github.com/JohnVerheij/JsonAssertions.TUnit)
+- [SseAssertions.TUnit](https://github.com/JohnVerheij/SseAssertions.TUnit)
+- [TracingAssertions.TUnit](https://github.com/JohnVerheij/TracingAssertions.TUnit)
+- [MetricsAssertions.TUnit](https://github.com/JohnVerheij/MetricsAssertions.TUnit)
 
 ## License
 

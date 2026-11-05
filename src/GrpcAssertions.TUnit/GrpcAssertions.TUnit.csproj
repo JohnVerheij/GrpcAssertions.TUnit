@@ -11,12 +11,12 @@
     <IsPackable>true</IsPackable>
     <PackageId>GrpcAssertions.TUnit</PackageId>
     <ProductName>GrpcAssertions.TUnit</ProductName>
-    <Version>0.3.0</Version>
+    <Version>0.3.1</Version>
     <Authors>John Verheij</Authors>
     <Copyright>Copyright (c) 2026 John Verheij</Copyright>
-    <Description>TUnit-native gRPC assertions for .NET tests. Fluent ThrowsGrpcException / DoesNotThrowGrpcException on a delegate, with StatusCode shorthands (IsUnavailable, IsNotFound, and the rest) and WithDetail / WithDetailContaining refinements, plus the IsRpcException discriminator and the GrpcCallBuilder test-double helper from the framework-agnostic core. AOT-compatible, trimmable, no runtime reflection in the assertion path.</Description>
+    <Description>TUnit-native gRPC assertions for .NET tests. Fluent ThrowsGrpcException / DoesNotThrowGrpcException on a delegate, with StatusCode shorthands (IsUnavailable, IsNotFound, and the rest) and WithDetail / WithDetailContaining / WithTrailer refinements, Streams() assertions on server-streaming calls, plus the IsRpcException discriminator and the GrpcCallBuilder test-double helper from the framework-agnostic core. AOT-compatible, trimmable, no runtime reflection in the assertion path.</Description>
     <PackageTags>tunit;assertions;testing;grpc;rpc;dotnet;aot</PackageTags>
-    <PackageProjectUrl>https://github.com/JohnVerheij/GrpcAssertions.TUnit</PackageProjectUrl>
+    <PackageProjectUrl>https://grpcassertions.dev</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageReleaseNotes>$(RepositoryUrl)/releases/tag/v$(Version)</PackageReleaseNotes>
@@ -27,7 +27,7 @@
     <NoWarn>$(NoWarn);Proj0212;Proj0213</NoWarn>
 
     <!-- ApiCompat baseline: pins to the previous shipped version; a docs-only patch records only the assembly-version bump (CP0003). -->
-    <PackageValidationBaselineVersion>0.2.0</PackageValidationBaselineVersion>
+    <PackageValidationBaselineVersion>0.3.0</PackageValidationBaselineVersion>
 
     <!-- Symbol package + API compat (strict mode quad per dpfa Proj0249/0250/0251/0252) -->
     <IncludeSymbols>true</IncludeSymbols>

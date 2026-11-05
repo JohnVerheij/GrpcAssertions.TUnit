@@ -15,7 +15,9 @@ namespace GrpcAssertions.TUnit;
 /// an expected <see cref="StatusCode"/> and an expected <see cref="Status.Detail"/>. Constructed by
 /// the <c>ThrowsGrpcException()</c> entry points on a delegate assertion source; the chain methods
 /// (<c>WithDetail</c>, <c>WithDetailContaining</c>, and the <c>IsUnavailable()</c> / <c>IsNotFound()</c>
-/// status shorthands) narrow the assertion and return the same instance.
+/// status shorthands) narrow the assertion and return the same instance. Chain the shorthands off the
+/// no-argument <c>ThrowsGrpcException()</c>: a status can be set once (through the argument or one
+/// shorthand), and setting it a second time throws <see cref="InvalidOperationException"/>.
 /// </summary>
 /// <remarks>
 /// The delegate's caught exception is moved into the assertion value by TUnit's
@@ -113,58 +115,72 @@ public sealed class GrpcExceptionAssertion : Assertion<RpcException>
 
     /// <summary>Asserts the status is <see cref="StatusCode.OK"/>.</summary>
     /// <returns>This assertion for chaining.</returns>
+    /// <exception cref="InvalidOperationException">A status expectation was already specified.</exception>
     public GrpcExceptionAssertion IsOk() => WithStatus(StatusCode.OK, nameof(IsOk));
 
     /// <summary>Asserts the status is <see cref="StatusCode.Cancelled"/>.</summary>
     /// <returns>This assertion for chaining.</returns>
+    /// <exception cref="InvalidOperationException">A status expectation was already specified.</exception>
     public GrpcExceptionAssertion IsCancelled() => WithStatus(StatusCode.Cancelled, nameof(IsCancelled));
 
     /// <summary>Asserts the status is <see cref="StatusCode.InvalidArgument"/>.</summary>
     /// <returns>This assertion for chaining.</returns>
+    /// <exception cref="InvalidOperationException">A status expectation was already specified.</exception>
     public GrpcExceptionAssertion IsInvalidArgument() => WithStatus(StatusCode.InvalidArgument, nameof(IsInvalidArgument));
 
     /// <summary>Asserts the status is <see cref="StatusCode.DeadlineExceeded"/>.</summary>
     /// <returns>This assertion for chaining.</returns>
+    /// <exception cref="InvalidOperationException">A status expectation was already specified.</exception>
     public GrpcExceptionAssertion IsDeadlineExceeded() => WithStatus(StatusCode.DeadlineExceeded, nameof(IsDeadlineExceeded));
 
     /// <summary>Asserts the status is <see cref="StatusCode.NotFound"/>.</summary>
     /// <returns>This assertion for chaining.</returns>
+    /// <exception cref="InvalidOperationException">A status expectation was already specified.</exception>
     public GrpcExceptionAssertion IsNotFound() => WithStatus(StatusCode.NotFound, nameof(IsNotFound));
 
     /// <summary>Asserts the status is <see cref="StatusCode.AlreadyExists"/>.</summary>
     /// <returns>This assertion for chaining.</returns>
+    /// <exception cref="InvalidOperationException">A status expectation was already specified.</exception>
     public GrpcExceptionAssertion IsAlreadyExists() => WithStatus(StatusCode.AlreadyExists, nameof(IsAlreadyExists));
 
     /// <summary>Asserts the status is <see cref="StatusCode.PermissionDenied"/>.</summary>
     /// <returns>This assertion for chaining.</returns>
+    /// <exception cref="InvalidOperationException">A status expectation was already specified.</exception>
     public GrpcExceptionAssertion IsPermissionDenied() => WithStatus(StatusCode.PermissionDenied, nameof(IsPermissionDenied));
 
     /// <summary>Asserts the status is <see cref="StatusCode.ResourceExhausted"/>.</summary>
     /// <returns>This assertion for chaining.</returns>
+    /// <exception cref="InvalidOperationException">A status expectation was already specified.</exception>
     public GrpcExceptionAssertion IsResourceExhausted() => WithStatus(StatusCode.ResourceExhausted, nameof(IsResourceExhausted));
 
     /// <summary>Asserts the status is <see cref="StatusCode.FailedPrecondition"/>.</summary>
     /// <returns>This assertion for chaining.</returns>
+    /// <exception cref="InvalidOperationException">A status expectation was already specified.</exception>
     public GrpcExceptionAssertion IsFailedPrecondition() => WithStatus(StatusCode.FailedPrecondition, nameof(IsFailedPrecondition));
 
     /// <summary>Asserts the status is <see cref="StatusCode.Aborted"/>.</summary>
     /// <returns>This assertion for chaining.</returns>
+    /// <exception cref="InvalidOperationException">A status expectation was already specified.</exception>
     public GrpcExceptionAssertion IsAborted() => WithStatus(StatusCode.Aborted, nameof(IsAborted));
 
     /// <summary>Asserts the status is <see cref="StatusCode.Unimplemented"/>.</summary>
     /// <returns>This assertion for chaining.</returns>
+    /// <exception cref="InvalidOperationException">A status expectation was already specified.</exception>
     public GrpcExceptionAssertion IsUnimplemented() => WithStatus(StatusCode.Unimplemented, nameof(IsUnimplemented));
 
     /// <summary>Asserts the status is <see cref="StatusCode.Internal"/>.</summary>
     /// <returns>This assertion for chaining.</returns>
+    /// <exception cref="InvalidOperationException">A status expectation was already specified.</exception>
     public GrpcExceptionAssertion IsInternal() => WithStatus(StatusCode.Internal, nameof(IsInternal));
 
     /// <summary>Asserts the status is <see cref="StatusCode.Unavailable"/>.</summary>
     /// <returns>This assertion for chaining.</returns>
+    /// <exception cref="InvalidOperationException">A status expectation was already specified.</exception>
     public GrpcExceptionAssertion IsUnavailable() => WithStatus(StatusCode.Unavailable, nameof(IsUnavailable));
 
     /// <summary>Asserts the status is <see cref="StatusCode.Unauthenticated"/>.</summary>
     /// <returns>This assertion for chaining.</returns>
+    /// <exception cref="InvalidOperationException">A status expectation was already specified.</exception>
     public GrpcExceptionAssertion IsUnauthenticated() => WithStatus(StatusCode.Unauthenticated, nameof(IsUnauthenticated));
 
     /// <inheritdoc/>

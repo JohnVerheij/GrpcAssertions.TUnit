@@ -6,10 +6,10 @@ using TUnit.Assertions.Core;
 namespace GrpcAssertions.TUnit;
 
 /// <summary>
-/// TUnit-native fluent entry points for asserting on gRPC exceptions. The v0.0.1 surface ships the
-/// <c>IsRpcException()</c> discriminator only; the full outcome-assertion surface
-/// (<c>ThrowsGrpcException</c> and the <c>StatusCode</c> shorthands, plus the <c>GrpcCallBuilder</c>
-/// test infrastructure) ships in v0.1.0.
+/// The TUnit <c>IsRpcException()</c> discriminator for a caught exception. The delegate assertions
+/// (<c>ThrowsGrpcException</c>, <c>DoesNotThrowGrpcException</c>) are in
+/// <see cref="global::TUnit.Assertions.Extensions.GrpcDelegateAssertionExtensions"/>, and the server-streaming
+/// assertion (<c>Streams()</c>) is in <see cref="global::TUnit.Assertions.Extensions.GrpcServerStreamAssertionExtensions"/>.
 /// </summary>
 /// <remarks>
 /// Source methods carry the <c>[GenerateAssertion]</c> attribute; TUnit's source generator emits

@@ -10,7 +10,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4.svg)](https://dotnet.microsoft.com/download/dotnet/10.0)
 
-TUnit-native gRPC assertions for .NET tests. Fluent entry points over TUnit's `Assert.That(...)` pipeline for asserting on gRPC call outcomes, with a framework-agnostic core (`GrpcAssertions`) that a future xUnit, NUnit, or MSTest adapter can reuse. AOT-compatible, trimmable, no runtime reflection in the assertion path.
+TUnit-native gRPC assertions for .NET tests. Fluent entry points over TUnit's `Assert.That(...)` pipeline for asserting on gRPC call outcomes, with a framework-agnostic core (`GrpcAssertions`) that the TUnit adapter builds on. AOT-compatible, trimmable, no runtime reflection in the assertion path.
 
 > **Scope:** Test projects only. Not intended for production code.
 
@@ -25,12 +25,14 @@ TUnit-native gRPC assertions for .NET tests. Fluent entry points over TUnit's `A
 - [Package layout](#package-layout)
 - [Namespaces (and a `GlobalUsings.cs` recommendation)](#namespaces-and-a-globalusingscs-recommendation)
 - [Quick start](#quick-start)
+- [Worked example: a client wrapper over a fake client](#worked-example-a-client-wrapper-over-a-fake-client)
 - [Entry points](#entry-points)
 - [Failure diagnostics](#failure-diagnostics)
 - [Cookbook: common patterns](#cookbook-common-patterns)
   - [Replacing hand-rolled `AsyncUnaryCall<T>` factories](#replacing-hand-rolled-asyncunarycallt-factories)
   - [When *not* to use `ThrowsGrpcException`](#when-not-to-use-throwsgrpcexception)
   - [Await the call against a generated client](#await-the-call-against-a-generated-client)
+  - [Recipes](#recipes)
 - [Design notes](#design-notes)
 - [Stability intent (pre-1.0)](#stability-intent-pre-10)
 - [Roadmap](#roadmap)
@@ -70,7 +72,7 @@ This repo ships **two** NuGet packages:
 | [`GrpcAssertions`](https://www.nuget.org/packages/GrpcAssertions/) | Framework-agnostic core: `GrpcCallBuilder` test-double builders, `GrpcOutcomeRendering` failure-message formatting, and `GrpcExceptions` predicates | `Grpc.Core.Api` |
 | [`GrpcAssertions.TUnit`](https://www.nuget.org/packages/GrpcAssertions.TUnit/) | TUnit `Assert.That(...)` entry points: `ThrowsGrpcException`, the `StatusCode` shorthands, detail refinements, and `DoesNotThrowGrpcException`. **Most users want this one.** | `GrpcAssertions` + `TUnit.Assertions` + `TUnit.Core` |
 
-You install `GrpcAssertions.TUnit`; `GrpcAssertions` and `Grpc.Core.Api` come transitively. Adapters for other test frameworks (NUnit, xUnit, MSTest) are *not* shipped today: they would reuse the `GrpcAssertions` core. Open a feature request if you need one.
+You install `GrpcAssertions.TUnit`; `GrpcAssertions` and `Grpc.Core.Api` come transitively. Adapters for other test frameworks (NUnit, xUnit, MSTest) are not planned; the family targets TUnit.
 
 ## Namespaces (and a `GlobalUsings.cs` recommendation)
 
@@ -78,8 +80,8 @@ The two packages place types in namespaces with deliberately-different scopes:
 
 | Type / member | Namespace | Auto-imported? |
 |---|---|---|
-| `ThrowsGrpcException()`, `DoesNotThrowGrpcException()`, `IsRpcException()` and the `IsUnavailable()` / `WithDetail()` chain | `TUnit.Assertions.Extensions` | **Yes**: TUnit auto-imports |
-| `GrpcExceptionAssertion`, `GrpcDoesNotThrowAssertion<T>` (the assertion classes behind the chain) | `GrpcAssertions.TUnit` | **No**: rarely referenced directly |
+| `ThrowsGrpcException()`, `DoesNotThrowGrpcException()`, `Streams()`, and the generated `IsRpcException()` (entry-point extension methods) | `TUnit.Assertions.Extensions` | **Yes**: TUnit auto-imports |
+| `GrpcExceptionAssertion` (the `IsUnavailable()` / `WithDetail()` / `WithTrailer()` chain methods are its instance methods), `GrpcDoesNotThrowAssertion<T>`, `ServerStreamAssertion<T>` (the assertion classes behind the entry points), and `RpcExceptionAssertions` (the source class of `IsRpcException()`) | `GrpcAssertions.TUnit` | **No**: rarely referenced directly |
 | `GrpcCallBuilder`, `GrpcExceptions`, `GrpcOutcomeRendering` (test-double builder, predicates, rendering) | `GrpcAssertions` | **No**: needed at the call site; recommended for `GlobalUsings.cs` |
 | `RpcException`, `StatusCode`, `Status`, `Metadata` (the gRPC types) | `Grpc.Core` | **No**: needed at the call site; recommended for `GlobalUsings.cs` |
 
@@ -112,6 +114,90 @@ var ok = GrpcCallBuilder.Success(new OrderReply());
 var bad = GrpcCallBuilder.Faulted<OrderReply>(StatusCode.NotFound, "no such order");
 ```
 
+## Worked example: a client wrapper over a fake client
+
+The code under test wraps a generated client: it returns the customer of an order, treats `NotFound`
+as "no such order", and lets every other failure through.
+
+```csharp
+public sealed class OrderLookup(Orders.OrdersClient client)
+{
+    public async Task<string?> FindCustomerAsync(int orderId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var reply = await client.GetOrderAsync(
+                new OrderRequest { Id = orderId }, cancellationToken: cancellationToken);
+            return reply.Customer;
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.NotFound)
+        {
+            return null;
+        }
+    }
+}
+```
+
+The fake derives from the generated client, which has a protected parameterless constructor for test
+doubles. Every convenience overload of a generated method calls its `CallOptions` overload, so the
+fake overrides only that one and returns a call built by `GrpcCallBuilder`:
+
+```csharp
+internal sealed class FakeOrdersClient(AsyncUnaryCall<OrderReply> call) : Orders.OrdersClient
+{
+    public override AsyncUnaryCall<OrderReply> GetOrderAsync(OrderRequest request, CallOptions options)
+        => call;
+}
+```
+
+One test per outcome:
+
+```csharp
+[Test]
+public async Task FindCustomer_ReturnsTheCustomerOfTheOrder(CancellationToken ct)
+{
+    var lookup = new OrderLookup(new FakeOrdersClient(
+        GrpcCallBuilder.Success(new OrderReply { Customer = "ada" })));
+
+    await Assert.That(await lookup.FindCustomerAsync(42, ct)).IsEqualTo("ada");
+}
+
+[Test]
+public async Task FindCustomer_TreatsNotFoundAsNoCustomer(CancellationToken ct)
+{
+    var lookup = new OrderLookup(new FakeOrdersClient(
+        GrpcCallBuilder.Faulted<OrderReply>(StatusCode.NotFound, "no such order")));
+
+    var customer = await Assert.That(() => lookup.FindCustomerAsync(42, ct))
+        .DoesNotThrowGrpcException();
+
+    await Assert.That(customer).IsNull();
+}
+
+[Test]
+public async Task FindCustomer_LetsOtherFailuresThrough(CancellationToken ct)
+{
+    var lookup = new OrderLookup(new FakeOrdersClient(
+        GrpcCallBuilder.Faulted<OrderReply>(StatusCode.Unavailable, "connection refused")));
+
+    await Assert.That(() => lookup.FindCustomerAsync(42, ct))
+        .ThrowsGrpcException(StatusCode.Unavailable)
+        .WithDetailContaining("connection refused", StringComparison.Ordinal);
+}
+```
+
+The wrapper awaits the call, so `() => lookup.FindCustomerAsync(...)` returns a `Task` that the
+assertion awaits. Against the fake or a generated client directly, write
+`async () => await client.GetOrderAsync(...)`: an `AsyncUnaryCall<T>` that is returned but not awaited
+hides the fault ([details](#await-the-call-against-a-generated-client)).
+
+**Coming from the ASP.NET Core docs?** [Mock a gRPC client](https://learn.microsoft.com/aspnet/core/grpc/test-client)
+builds the call with `CallHelpers.CreateAsyncUnaryCall`, an `internal` helper from the grpc-dotnet
+examples that each test project copies. `GrpcCallBuilder.Success(response)` and
+`GrpcCallBuilder.Faulted<T>(statusCode)` are the packaged equivalents, with detail, headers, trailers
+and server streaming on top, and they work with a mocking library the same way:
+`.Returns(GrpcCallBuilder.Success(new HelloReply { Message = "Test" }))`.
+
 ## Entry points
 
 Delegate assertions, on `Assert.That(() => client.Method(...))` (auto-imported from `TUnit.Assertions.Extensions`):
@@ -120,9 +206,9 @@ Delegate assertions, on `Assert.That(() => client.Method(...))` (auto-imported f
 |---|---|
 | `ThrowsGrpcException()` | Asserts the call throws a gRPC `RpcException` of any status. Returns a chain. |
 | `ThrowsGrpcException(StatusCode expected)` | Asserts the call throws an `RpcException` with the given status. Returns a chain. |
-| `DoesNotThrowGrpcException()` | Asserts the call completes without throwing an `RpcException`. |
+| `DoesNotThrowGrpcException()` | Asserts the call completes without throwing. Any thrown exception fails the assertion: an `RpcException` is rendered as its status code and detail, any other exception by type name and message. |
 
-Chain off `ThrowsGrpcException()` to refine:
+Chain off `ThrowsGrpcException()` to refine. Chain the status shorthands off the no-argument `ThrowsGrpcException()`; a status can be set once (through the argument or through one shorthand), and setting it a second time throws `InvalidOperationException`:
 
 | Chain method | Behavior |
 |---|---|
@@ -160,7 +246,7 @@ Framework-agnostic core (`GrpcAssertions` namespace), for test doubles and non-T
 
 ## Failure diagnostics
 
-Every failed assertion renders the actual gRPC outcome alongside the expectation. A status mismatch:
+A failed `ThrowsGrpcException` or `DoesNotThrowGrpcException` that caught an `RpcException` renders its actual outcome (status and detail, plus the trailers when a trailer expectation fails) alongside the expectation. A status mismatch:
 
 ```text
 Expected the gRPC call to throw an RpcException with StatusCode Unavailable
@@ -181,7 +267,7 @@ Expected the gRPC call not to throw an RpcException
 but it threw RpcException with StatusCode Unavailable, Detail "connection refused"
 ```
 
-`Status.Detail` is truncated at `GrpcOutcomeRendering.MaxDetailLength` (200 characters) with a horizontal-ellipsis suffix, so a verbose server detail does not flood the test output.
+The actual `Status.Detail` in the rendered outcome is truncated at `GrpcOutcomeRendering.MaxDetailLength` (200 characters) with a horizontal-ellipsis suffix, so a verbose server detail does not flood the test output. The expected detail and trailer values are not truncated.
 
 ## Cookbook: common patterns
 
@@ -240,12 +326,16 @@ public sealed class FakeGreeterClient : Greeter.GreeterClient
 
 `Success<T>(T)` infers `T` from the response argument, so `GrpcCallBuilder.Success(_reply)` needs no type argument. `Faulted<T>(RpcException)` and `Faulted<T>(StatusCode, string?)` cannot infer `T` (the response type appears only in the return), so name it explicitly: `GrpcCallBuilder.Faulted<MyResponse>(...)`.
 
-To fault with a pre-built `RpcException` (for example to attach trailers), use the `Faulted<T>(RpcException)` overload:
+To fault with a pre-built `RpcException` (for example to attach trailers), use the `Faulted<T>(RpcException)` overload. The exception's trailers come through on the call:
 
 ```csharp
-var ex = new RpcException(new Status(StatusCode.NotFound, "no such greeting"));
+var trailers = new Metadata { { "retry-after", "5" } };
+var ex = new RpcException(new Status(StatusCode.NotFound, "no such greeting"), trailers);
 return GrpcCallBuilder.Faulted<MyResponse>(ex);
 ```
+
+When you do not need your own exception, `Faulted<T>(StatusCode, string?, Metadata)` is the direct route:
+`GrpcCallBuilder.Faulted<MyResponse>(StatusCode.NotFound, "no such greeting", trailers)`.
 
 ### When *not* to use `ThrowsGrpcException`
 
@@ -254,8 +344,16 @@ return GrpcCallBuilder.Faulted<MyResponse>(ex);
 Identity-propagation tests stay on `Throws<RpcException>()` plus `IsSameReferenceAs`:
 
 ```csharp
+// A fake that faults every call with the exact exception it is given.
+internal sealed class ThrowingGreeterClient(RpcException thrown) : Greeter.GreeterClient
+{
+    public override AsyncUnaryCall<MyResponse> SayHelloAsync(MyRequest request, CallOptions options)
+        => GrpcCallBuilder.Faulted<MyResponse>(thrown);
+}
+
+// GreeterWrapper stands for your code under test: a wrapper whose SayHelloAsync awaits the generated client.
 var thrown = new RpcException(new Status(StatusCode.Internal, "boom"));
-var sut = new RetryingGreeterClient(new FakeGreeterClient(reply: null!, throwOnCall: thrown));
+var sut = new GreeterWrapper(new ThrowingGreeterClient(thrown));
 
 var caught = await Assert.That(() => sut.SayHelloAsync(request, ct)).Throws<RpcException>();
 await Assert.That(caught!).IsSameReferenceAs(thrown);
@@ -277,6 +375,8 @@ await Assert.That(() => generatedClient.GetOrderAsync(request).ResponseAsync).Th
 ```
 
 This package is built for testing client *wrappers* (which return `Task`), so the wrapper examples above need no change; the note matters only when you assert directly against a raw generated client.
+
+### Recipes
 
 **Assert a specific failure, status and detail in one chain:**
 
@@ -318,11 +418,11 @@ await Assert.That(caught!).IsRpcException();
 
 ## Design notes
 
-- **Assertions on delegates, not on `RpcException` instances.** The primary entry point is `Assert.That(() => client.Method(...))`. The library executes the call and inspects the thrown `RpcException`, cleaner than catching the exception in the test. A non-`RpcException` throw, or nothing thrown, fails the assertion rather than the test.
+- **Assertions on delegates, not on `RpcException` instances.** The primary entry point is `Assert.That(() => client.Method(...))`. The library executes the call and inspects the thrown `RpcException`, cleaner than catching the exception in the test. For `ThrowsGrpcException`, a non-`RpcException` throw, or nothing thrown, fails the assertion rather than the test (for `DoesNotThrowGrpcException`, nothing thrown passes).
 - **`Grpc.Core.Api` only.** The package depends on `Grpc.Core.Api` (the minimal API surface containing `RpcException`, `StatusCode`, `Status`, `Metadata`), not `Grpc.Net.Client` or `Google.Protobuf`, so it works with any gRPC implementation. The dependency is intrinsic: the public surface is typed against the consumer's real `RpcException`, so a home-grown enum would not compile against thrown exceptions.
 - **No Protobuf dependency.** The library asserts on gRPC transport-level outcomes (status, detail), not on Protobuf message structure. Assert on response message fields with standard TUnit assertions on the deserialized response object.
 - **Explicit `StringComparison` on detail assertions.** `WithDetailContaining` requires a `StringComparison`, matching the convention across the assertion family. `WithDetail` is exact and ordinal.
-- **`GrpcCallBuilder` is test infrastructure, not an assertion.** It builds `AsyncUnaryCall<T>` instances for fakes and lives in the framework-agnostic core, so a future non-TUnit adapter reuses it. Both builders guard their arguments with `ArgumentNullException.ThrowIfNull`, unlike hand-rolled fakes that dereference null later.
+- **`GrpcCallBuilder` is test infrastructure, not an assertion.** It builds `AsyncUnaryCall<T>` and `AsyncServerStreamingCall<T>` instances for fakes and lives in the framework-agnostic core, so a non-TUnit adapter can reuse it. The builder methods guard their reference arguments with `ArgumentNullException.ThrowIfNull`, unlike hand-rolled fakes that dereference null later.
 - **No runtime reflection** in the assertion path; AOT-clean and trimmable.
 
 ## Stability intent (pre-1.0)
@@ -359,7 +459,7 @@ For per-package release notes:
 - **[`MathAssertions.TUnit`](https://www.nuget.org/packages/MathAssertions.TUnit/)**: tolerance-aware fluent assertions over numeric and geometric types (vectors, quaternions, matrices, planes, complex numbers, arrays).
 - **[`JsonAssertions.TUnit`](https://www.nuget.org/packages/JsonAssertions.TUnit/)**: fluent JSON assertions over `System.Text.Json`, HTTP response bodies (including RFC 7807 ProblemDetails), and source-generated `JsonSerializerContext` registration.
 - **[`SseAssertions.TUnit`](https://www.nuget.org/packages/SseAssertions.TUnit/)**: Server-Sent Events wire-format and stream assertions over HTTP response bodies, streams, and strings.
-- **[`TracingAssertions.TUnit`](https://www.nuget.org/packages/TracingAssertions.TUnit/)**: fluent OpenTelemetry distributed-tracing (`Activity` / span) assertions: operation name, tags, status, and parent/child and same-trace relationships, captured via a raw `ActivityListener` with no OpenTelemetry SDK dependency.
+- **[`TracingAssertions.TUnit`](https://www.nuget.org/packages/TracingAssertions.TUnit/)**: fluent OpenTelemetry distributed-tracing (`Activity` / span) assertions: operation name, tags, status, kind, events, and parent/child, root and same-trace relationships, captured via a raw `ActivityListener` with no OpenTelemetry SDK dependency.
 - **[`MetricsAssertions.TUnit`](https://www.nuget.org/packages/MetricsAssertions.TUnit/)**: fluent assertions over `System.Diagnostics.Metrics` instruments (counters, histograms, gauges), built on `MetricCollector`.
 
 ## Contributing

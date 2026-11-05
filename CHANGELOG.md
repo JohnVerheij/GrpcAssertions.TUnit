@@ -15,6 +15,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-05: worked example for a client wrapper
+
+Patch release. No API or behavior change.
+
+### Changed
+
+- **README:** a worked example that tests a client wrapper over a fake of a generated client, one test per outcome (success, a swallowed `NotFound`, a failure that passes through), with the reminder that a delegate over a raw `AsyncUnaryCall<T>` must await it; and a note for readers of the ASP.NET Core docs that `GrpcCallBuilder.Success` and `Faulted` replace the copied `CallHelpers` helper.
+- **NuGet descriptions** of both packages now list the trailer and server-streaming surface: the core description names the response-header and trailer overloads of `Success` and `Faulted` and the server-streaming builders, and the TUnit description names `WithTrailer` and `Streams()`.
+- **NuGet package metadata** of both packages now links `PackageProjectUrl` to https://grpcassertions.dev, and the `assertions` and `testing` tags now come before `grpc` (after `tunit` on the TUnit package).
+- **README and core NuGet description** now say adapters for other test frameworks are not planned; the family targets TUnit.
+- **`ThrowsGrpcException`** documentation now says to chain the status shorthands off the no-argument `ThrowsGrpcException()`, and that a status can be set once (through the argument or one shorthand): setting it a second time throws `InvalidOperationException`. Each of the 14 shorthands documents the exception.
+- **`DoesNotThrowGrpcException`** documentation now says any thrown exception fails the assertion: an `RpcException` is rendered as its status code and detail, any other exception by type name and message. The README design note about a non-`RpcException` throw now applies to `ThrowsGrpcException` only.
+- **README failure diagnostics** now say a failed `ThrowsGrpcException` or `DoesNotThrowGrpcException` that caught an `RpcException` renders its outcome, and that only the actual detail in that outcome is truncated at 200 characters (the expected detail and trailer values are not).
+- **README namespace table** now lists the `IsUnavailable()` / `WithDetail()` chain as instance methods of `GrpcExceptionAssertion` in `GrpcAssertions.TUnit`, and the entry points (`ThrowsGrpcException`, `DoesNotThrowGrpcException`, `Streams`, `IsRpcException`) under `TUnit.Assertions.Extensions`.
+- **`GrpcCallBuilder`** README design note now says the builder methods build both `AsyncUnaryCall<T>` and `AsyncServerStreamingCall<T>` and guard their reference arguments with `ArgumentNullException.ThrowIfNull`.
+- **`GrpcCallBuilder.Faulted`** README sample for a pre-built `RpcException` now attaches trailers.
+- **`GrpcCallBuilder.Faulted`** README now names the `Faulted<T>(StatusCode, string?, Metadata)` overload as the direct route to a faulted call with trailers.
+- **`IsSameReferenceAs`** README recipe now uses a self-contained throwing fake.
+- **README recipes** now sit under their own `Recipes` heading.
+- **`ServerStreamAssertion<TResponse>`** documentation now says the `AndStreamItems` callback runs only when the count and predicate expectations pass, that only an `RpcException` from the reader becomes a failure (other exceptions propagate), and that calling `StreamsAtLeast`, `StreamsExactly` or `AndStreamItems` again replaces the earlier value.
+- **`GrpcExceptions`** and **`RpcExceptionAssertions`** XML summaries now describe the current surface instead of the v0.0.1 stub.
+- **`TUnit.Assertions`** and **`TUnit.Core`** minimum versions raised from 1.54.0 to 1.80.0, and **`Grpc.Core.Api`** from 2.80.0 to 2.85.0.
+
 ## [0.3.0] - 2026-06-14: server-streaming builders and assertions
 
 Minor release. Extends the builder and the assertion surface from unary calls to server-streaming calls: `GrpcCallBuilder` now constructs `AsyncServerStreamingCall<T>` test doubles, and a `Streams()` chain asserts on the streamed responses. Purely additive; the `0.2.0` ApiCompat baseline is preserved.
@@ -79,7 +102,8 @@ Skeleton release. Establishes the repository, the `GrpcAssertions` (core) and `G
 - **`GrpcExceptions.IsRpcException(Exception?)`** framework-agnostic predicate in the `GrpcAssertions` core package. Returns `false` for `null` and for any non-`RpcException` type. The adapter assertion is a thin wrapper over this helper, so a future xUnit, NUnit, or MSTest adapter reuses the same logic.
 - Single disclosed runtime dependency: `Grpc.Core.Api` (Apache-2.0), the package that defines the `RpcException` / `StatusCode` / `Status` types the assertions are about. It flows transitively to consumers through the core package.
 
-[unreleased]: https://github.com/JohnVerheij/GrpcAssertions.TUnit/compare/v0.3.0...HEAD
+[unreleased]: https://github.com/JohnVerheij/GrpcAssertions.TUnit/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/JohnVerheij/GrpcAssertions.TUnit/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/JohnVerheij/GrpcAssertions.TUnit/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/JohnVerheij/GrpcAssertions.TUnit/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/JohnVerheij/GrpcAssertions.TUnit/compare/v0.1.1...v0.1.2

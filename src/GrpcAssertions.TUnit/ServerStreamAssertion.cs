@@ -20,8 +20,10 @@ namespace GrpcAssertions.TUnit;
 /// <remarks>
 /// The response stream is read exactly once, when the assertion is awaited: every accumulated
 /// expectation, and the optional <c>AndStreamItems</c> callback, runs against the single materialized
-/// list. A stream that faults mid-read (an <see cref="RpcException"/> from the reader) fails the
-/// assertion with the partial count and the rendered gRPC outcome.
+/// list. The <c>AndStreamItems</c> callback runs only when the count and predicate expectations pass.
+/// Only an <see cref="RpcException"/> from the reader becomes a failure (with the partial count and the
+/// rendered gRPC outcome); any other exception propagates. Calling <c>StreamsAtLeast</c>,
+/// <c>StreamsExactly</c>, or <c>AndStreamItems</c> again replaces the earlier value.
 /// </remarks>
 /// <typeparam name="TResponse">The streamed response message type.</typeparam>
 public sealed class ServerStreamAssertion<TResponse> : Assertion<AsyncServerStreamingCall<TResponse>>
