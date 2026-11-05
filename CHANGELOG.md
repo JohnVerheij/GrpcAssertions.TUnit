@@ -36,7 +36,7 @@ Patch release. No API or behavior change.
 - **README recipes** now sit under their own `Recipes` heading.
 - **`ServerStreamAssertion<TResponse>`** documentation now says the `AndStreamItems` callback runs only when the count and predicate expectations pass, that only an `RpcException` from the reader becomes a failure (other exceptions propagate), and that calling `StreamsAtLeast`, `StreamsExactly` or `AndStreamItems` again replaces the earlier value.
 - **`GrpcExceptions`** and **`RpcExceptionAssertions`** XML summaries now describe the current surface instead of the v0.0.1 stub.
-- **`TUnit.Assertions`** and **`TUnit.Core`** minimum versions raised from 1.54.0 to 1.77.0, and **`Grpc.Core.Api`** from 2.80.0 to 2.85.0.
+- **`TUnit.Assertions`** and **`TUnit.Core`** minimum versions raised from 1.54.0 to 1.80.0, and **`Grpc.Core.Api`** from 2.80.0 to 2.85.0.
 
 ## [0.3.0] - 2026-06-14: server-streaming builders and assertions
 
