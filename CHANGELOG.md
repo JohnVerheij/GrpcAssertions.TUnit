@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`TUnit.Assertions`** and **`TUnit.Core`** minimum versions raised from 1.80.0 to 1.85.0: 1.83.0 is the first TUnit with a `net11.0` asset, and 1.85.0 keeps TUnit's OpenTelemetry and ASP.NET Core packages on OpenTelemetry 1.20.x for `net10.0`, so a project with one version for all its TUnit packages gets no .NET 11 packages there.
 - **`IsRpcException()`** now fails the assertion for a `null` exception instead of throwing `ArgumentNullException`, as `GrpcExceptions.IsRpcException(null)` already returned `false`. Its failure message now reads `Expected to be a gRPC RpcException` and `but it was InvalidOperationException`, naming the short type name like the other messages; before, it named the full type name.
 - **Failure messages** now render a carriage return or line feed in a status detail, a thrown exception's message, or a trailer key or value (actual or expected) as the two characters backslash and `r` or `n`, so each clause of a message stays on one line as `GrpcOutcomeRendering.DescribeStatus` documents.
 - **`GrpcOutcomeRendering.MaxDetailLength`** and the README now say the limit counts UTF-16 code units, not characters.
