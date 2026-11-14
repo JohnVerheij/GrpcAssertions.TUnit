@@ -37,8 +37,7 @@ public sealed class GrpcDoesNotThrowAssertion<TValue> : Assertion<TValue>
 
         if (exception is not null)
         {
-            return Task.FromResult(AssertionResult.Failed(string.Concat(
-                "it threw ", exception.GetType().Name, ": ", exception.Message)));
+            return Task.FromResult(AssertionResult.Failed(FailureText.DescribeThrown(exception)));
         }
 
         return Task.FromResult(AssertionResult.Passed);

@@ -188,8 +188,7 @@ public sealed class GrpcExceptionAssertion : Assertion<RpcException>
     {
         if (metadata.Exception is not null)
         {
-            return Task.FromResult(AssertionResult.Failed(string.Concat(
-                "it threw ", metadata.Exception.GetType().Name, ": ", metadata.Exception.Message)));
+            return Task.FromResult(AssertionResult.Failed(FailureText.DescribeThrown(metadata.Exception)));
         }
 
         var rpc = metadata.Value;
@@ -228,7 +227,10 @@ public sealed class GrpcExceptionAssertion : Assertion<RpcException>
         if (_hasDetailCheck)
         {
             var detailPrefix = _detailContains ? " with detail containing \"" : " with detail \"";
-            detail = string.Concat(detailPrefix, _expectedDetail, "\"");
+            detail = string.Concat(
+                detailPrefix,
+                FailureText.EscapeLineBreaks(_expectedDetail!),
+                "\"");
         }
 
         var trailers = string.Empty;
@@ -237,10 +239,10 @@ public sealed class GrpcExceptionAssertion : Assertion<RpcException>
             var sb = new StringBuilder();
             foreach (var (key, text, bytes) in _expectedTrailers)
             {
-                sb.Append(" with trailer \"").Append(key).Append("\" = ");
+                sb.Append(" with trailer \"").Append(FailureText.EscapeLineBreaks(key)).Append("\" = ");
                 sb.Append(bytes is not null
                     ? string.Concat("byte[", bytes.Length.ToString(CultureInfo.InvariantCulture), "]")
-                    : string.Concat("\"", text, "\""));
+                    : string.Concat("\"", FailureText.EscapeLineBreaks(text!), "\""));
             }
 
             trailers = sb.ToString();
@@ -279,14 +281,14 @@ public sealed class GrpcExceptionAssertion : Assertion<RpcException>
             }
 
             first = false;
-            sb.Append(entry.Key).Append('=');
+            sb.Append(FailureText.EscapeLineBreaks(entry.Key)).Append('=');
             if (entry.IsBinary)
             {
                 sb.Append("(binary, ").Append(entry.ValueBytes.Length.ToString(CultureInfo.InvariantCulture)).Append(" bytes)");
             }
             else
             {
-                sb.Append('"').Append(entry.Value).Append('"');
+                sb.Append('"').Append(FailureText.EscapeLineBreaks(entry.Value)).Append('"');
             }
         }
 
@@ -318,14 +320,17 @@ public sealed class GrpcExceptionAssertion : Assertion<RpcException>
     // Escapes a user-supplied detail so the rendered assertion chain stays a single, unambiguous
     // line even when the value contains quotes, backslashes, or line breaks.
     private static string EscapeForExpression(string value)
-        => value
+        => FailureText.EscapeLineBreaks(value
             .Replace("\\", "\\\\", StringComparison.Ordinal)
-            .Replace("\"", "\\\"", StringComparison.Ordinal)
-            .Replace("\r", "\\r", StringComparison.Ordinal)
-            .Replace("\n", "\\n", StringComparison.Ordinal);
+            .Replace("\"", "\\\"", StringComparison.Ordinal));
 
+    // A null detail (default(Status), or a Status built with null) counts as empty, as the rendered
+    // failure text and the builders already treat it.
     private bool DetailMatches(RpcException rpc)
-        => _detailContains
-            ? rpc.Status.Detail.Contains(_expectedDetail!, _detailComparison)
-            : string.Equals(rpc.Status.Detail, _expectedDetail, _detailComparison);
+    {
+        var detail = rpc.Status.Detail ?? string.Empty;
+        return _detailContains
+            ? detail.Contains(_expectedDetail!, _detailComparison)
+            : string.Equals(detail, _expectedDetail, _detailComparison);
+    }
 }

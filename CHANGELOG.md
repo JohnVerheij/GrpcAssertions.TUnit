@@ -15,6 +15,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`GrpcCallBuilder.Faulted<TResponse>(Exception)`** fails a unary call with any exception in one line, for a fault outside gRPC such as a `TimeoutException` or an `ObjectDisposedException`. The response task throws the exception itself, the response headers are empty, the trailers accessor returns one empty `Metadata` on every call, and the status is `Unknown` with the exception message (`StatusCode.Cancelled` for an `OperationCanceledException`, the status a real client reports for a canceled call). The response task is faulted, never canceled, even for an `OperationCanceledException`, as with a real client that has `GrpcChannelOptions.ThrowOperationCanceledOnCancellation` set. An `RpcException` passed through this overload behaves exactly as in `Faulted<TResponse>(RpcException)`.
+- **Target frameworks:** both packages now target `net10.0` and `net11.0`, following the family's target framework policy (every .NET version in Microsoft support, never an end-of-life one).
+
+### Changed
+
+- **`IsRpcException()`** now fails the assertion for a `null` exception instead of throwing `ArgumentNullException`, as `GrpcExceptions.IsRpcException(null)` already returned `false`. Its failure message now reads `Expected to be a gRPC RpcException` and `but it was InvalidOperationException`, naming the short type name like the other messages; before, it named the full type name.
+- **Failure messages** now render a carriage return or line feed in a status detail, a thrown exception's message, or a trailer key or value (actual or expected) as the two characters backslash and `r` or `n`, so each clause of a message stays on one line as `GrpcOutcomeRendering.DescribeStatus` documents.
+- **`GrpcOutcomeRendering.MaxDetailLength`** and the README now say the limit counts UTF-16 code units, not characters.
+- **`ServerStreaming` and `ServerStreamingFaulted`** documentation and the README now say that the responses are materialized when the call is built, that status and trailers are available at once (a real client throws `InvalidOperationException` until the call completes), and that `MoveNext` with a canceled token returns a canceled task (a real client by default surfaces an `RpcException` with `StatusCode.Cancelled`). The README also says a second `Streams()` on one call finds the stream drained, and has a new section on how faithful the fakes are.
+- **README roadmap** no longer promises dedicated deadline and cancellation assertions: `ThrowsGrpcException(StatusCode.DeadlineExceeded)` and the `IsDeadlineExceeded()` and `IsCancelled()` shorthands cover the observed use, and the roadmap now names a server-side call-context builder as next.
+- **README, CONVENTIONS and SECURITY** describe the target framework policy, and every sample in the READMEs now compiles against the packed packages.
+- **NuGet description** of the core package names the `Faulted` overload for any exception.
+
+### Fixed
+
+- **`WithDetailContaining`** threw `NullReferenceException` when the status detail was `null` (`default(Status)`, or a `Status` built with `null`); it now fails the assertion like any other mismatch. A `null` detail now counts as empty for `WithDetail` as well, as the rendered failure message and the builders already treated it.
+- **Failure messages** no longer cut a status detail between the two halves of a surrogate pair, which left a lone surrogate in the output; a pair that straddles the limit is dropped whole.
+- **`MoveNext` on a fake server stream** with an already-canceled token threw `OperationCanceledException` from the call itself; it now returns a canceled task, as the real client reader reports cancellation through the returned task.
+- **`StreamContains`** put the predicate's source text into the failure message with its line breaks, so a multi-line lambda split the `no streamed response matched` clause over several lines; the predicate now reads on one line, each line break and the indentation around it shown as one space.
+- **`ServerStreaming` and `ServerStreamingFaulted`** kept a reference to a `List<T>` or array passed in, so changing the collection after building the call changed the stream, contrary to the documented materialization at build time; they now always copy the responses.
+- **`ServerStreaming`** returned a new trailers `Metadata` from each call of its trailers accessor; it now returns one stable instance, as `Success` does.
+
 ## [0.3.1] - 2026-11-05: worked example for a client wrapper
 
 Patch release. No API or behavior change.

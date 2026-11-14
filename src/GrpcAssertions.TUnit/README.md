@@ -18,12 +18,12 @@ Delegate assertions on `Assert.That(() => client.Method(...))`:
 |---|---|
 | `ThrowsGrpcException()` / `ThrowsGrpcException(StatusCode)` | Asserts the call throws an `RpcException` (optionally with a status). Returns a chain. |
 | `DoesNotThrowGrpcException()` | Asserts the call completes without throwing. Any thrown exception fails the assertion. |
-| `IsRpcException()` (on a caught `Exception`) | Asserts the exception is a gRPC `RpcException`. |
+| `IsRpcException()` (on a caught `Exception`) | Asserts the exception is a gRPC `RpcException`. A `null` exception fails the assertion. |
 | `Streams()` (on an `AsyncServerStreamingCall<T>`) *(v0.3.0+)* | Asserts on a server-streaming call's responses. Returns a chain. |
 
 Chain off the no-argument `ThrowsGrpcException()`: 14 `StatusCode` shorthands (`IsUnavailable()`, `IsNotFound()`, and the rest; a status can be set once, through the argument or one shorthand, and a second time throws `InvalidOperationException`), plus `WithDetail(string)`, `WithDetailContaining(string, StringComparison)`, and `WithTrailer(...)`. Chain off `Streams()`: `StreamsAtLeast(int)`, `StreamsExactly(int)`, `StreamContains(Func<T, bool>)`, and `AndStreamItems(Func<IReadOnlyList<T>, Task>)`.
 
-The framework-agnostic core (`GrpcAssertions`) also ships the `GrpcCallBuilder` test-double helper for building `AsyncUnaryCall<T>` fakes (`Success<T>` / `Faulted<T>`) and, since v0.3.0, `AsyncServerStreamingCall<T>` fakes (`ServerStreaming<T>` / `ServerStreamingFaulted<T>`). `Success<T>(T)` infers `T` from its argument; `Faulted<T>(RpcException)` needs the explicit `T`. `Success` and `Faulted` are the packaged equivalents of the `CallHelpers.CreateAsyncUnaryCall` helper that the ASP.NET Core docs copy from the gRPC examples. The [GitHub README](https://github.com/JohnVerheij/GrpcAssertions.TUnit#cookbook-common-patterns) has a before/after recipe for replacing hand-rolled `AsyncUnaryCall<T>` factories, and guidance on when *not* to migrate a test to `ThrowsGrpcException`.
+The framework-agnostic core (`GrpcAssertions`) also ships the `GrpcCallBuilder` test-double helper for building `AsyncUnaryCall<T>` fakes (`Success<T>` / `Faulted<T>`) and, since v0.3.0, `AsyncServerStreamingCall<T>` fakes (`ServerStreaming<T>` / `ServerStreamingFaulted<T>`). `Success<T>(T)` infers `T` from its argument; `Faulted<T>(RpcException)` needs the explicit `T`. `Faulted<T>(Exception)` fails a call with any exception, such as a `TimeoutException`, in one line. `Success` and `Faulted` are the packaged equivalents of the `CallHelpers.CreateAsyncUnaryCall` helper that the ASP.NET Core docs copy from the gRPC examples. The [GitHub README](https://github.com/JohnVerheij/GrpcAssertions.TUnit#cookbook-common-patterns) has a before/after recipe for replacing hand-rolled `AsyncUnaryCall<T>` factories, and guidance on when *not* to migrate a test to `ThrowsGrpcException`.
 
 ## Install
 
@@ -31,7 +31,7 @@ The framework-agnostic core (`GrpcAssertions`) also ships the `GrpcCallBuilder` 
 dotnet add package GrpcAssertions.TUnit
 ```
 
-**Requirements:** TUnit 1.81.16 or later, .NET 10. The framework-agnostic `GrpcAssertions` core and its `Grpc.Core.Api` dependency come transitively.
+**Requirements:** TUnit 1.81.16 or later, .NET 10 or .NET 11. The framework-agnostic `GrpcAssertions` core and its `Grpc.Core.Api` dependency come transitively.
 
 ## Quick start
 

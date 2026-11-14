@@ -61,7 +61,7 @@ This library collapses that to one chain, and ships the `GrpcCallBuilder` test-d
 dotnet add package GrpcAssertions.TUnit
 ```
 
-**Requirements:** TUnit 1.81.16 or later, .NET 10. The framework-agnostic `GrpcAssertions` core and its single `Grpc.Core.Api` dependency come transitively. The package is AOT-compatible, trimmable, and uses no runtime reflection in the assertion path.
+**Requirements:** TUnit 1.81.16 or later, .NET 10 or .NET 11. The framework-agnostic `GrpcAssertions` core and its single `Grpc.Core.Api` dependency come transitively. The package is AOT-compatible, trimmable, and uses no runtime reflection in the assertion path.
 
 ## Package layout
 
@@ -213,8 +213,8 @@ Chain off `ThrowsGrpcException()` to refine. Chain the status shorthands off the
 | Chain method | Behavior |
 |---|---|
 | `IsOk()`, `IsCancelled()`, `IsInvalidArgument()`, `IsDeadlineExceeded()`, `IsNotFound()`, `IsAlreadyExists()`, `IsPermissionDenied()`, `IsResourceExhausted()`, `IsFailedPrecondition()`, `IsAborted()`, `IsUnimplemented()`, `IsInternal()`, `IsUnavailable()`, `IsUnauthenticated()` | Assert the status equals the corresponding `StatusCode`. |
-| `WithDetail(string)` | Assert `Status.Detail` exactly equals the string (ordinal). |
-| `WithDetailContaining(string, StringComparison)` | Assert `Status.Detail` contains the substring using the given comparison. |
+| `WithDetail(string)` | Assert `Status.Detail` exactly equals the string (ordinal). A `null` detail counts as empty. |
+| `WithDetailContaining(string, StringComparison)` | Assert `Status.Detail` contains the substring using the given comparison. A `null` detail counts as empty, so the assertion fails (or passes for the empty substring) instead of throwing. |
 | `WithTrailer(string key, string value)` *(v0.2.0+)* | Assert the exception's `Trailers` contain a text entry at `key` equal to `value` (ordinal). Keys match case-insensitively (gRPC lowercases keys). |
 | `WithTrailer(string key, ReadOnlySpan<byte> value)` *(v0.2.0+)* | Assert the exception's `Trailers` contain a binary (`-bin`) entry at `key` whose bytes equal `value`. A `byte[]` converts implicitly. |
 
@@ -222,13 +222,13 @@ Exception discriminator, on a caught `Exception`:
 
 | Entry point | Behavior |
 |---|---|
-| `IsRpcException()` | Asserts the exception is a gRPC `RpcException`. The failure message names the actual exception type. |
+| `IsRpcException()` | Asserts the exception is a gRPC `RpcException`. The failure message names the actual exception type (`but it was InvalidOperationException`). A `null` exception fails the assertion, as `GrpcExceptions.IsRpcException(null)` returns `false`. |
 
 Server-streaming assertions *(v0.3.0+)*, on `Assert.That(call)` where `call` is an `AsyncServerStreamingCall<T>`:
 
 | Entry point / chain method | Behavior |
 |---|---|
-| `Streams(CancellationToken = default)` | Begins a server-streaming assertion. Reads the response stream once when awaited; returns a chain. A stream that faults mid-read fails with the partial count and the rendered gRPC outcome. |
+| `Streams(CancellationToken = default)` | Begins a server-streaming assertion. Reads the response stream once when awaited; returns a chain. A stream that faults mid-read fails with the partial count and the rendered gRPC outcome. The fake stream is single-pass: a second `Streams()` on the same call finds it already drained. |
 | `StreamsAtLeast(int)` / `StreamsExactly(int)` | Assert the response count is at least / exactly the given value. |
 | `StreamContains(Func<T, bool>)` | Assert at least one streamed response matches the predicate. The predicate's source text is captured for the failure message. |
 | `AndStreamItems(Func<IReadOnlyList<T>, Task>)` | Run follow-on assertions against the materialized responses after the count and content expectations pass, without re-reading the stream. |
@@ -239,6 +239,7 @@ Framework-agnostic core (`GrpcAssertions` namespace), for test doubles and non-T
 |---|---|
 | `GrpcCallBuilder.Success<T>(T response)` / `Success<T>(T, Metadata?, Metadata?)` *(v0.2.0+)* | Builds a successful `AsyncUnaryCall<T>` (response, optional response headers and trailers, terminal `OK`). The trailers accessor returns a stable instance. |
 | `GrpcCallBuilder.Faulted<T>(RpcException)` / `Faulted<T>(StatusCode, string?)` / `Faulted<T>(StatusCode, string?, Metadata)` *(v0.2.0+)* | Builds a faulted `AsyncUnaryCall<T>` surfacing the exception's status and trailers. |
+| `GrpcCallBuilder.Faulted<T>(Exception)` | Builds a faulted `AsyncUnaryCall<T>` whose response task throws that exception itself (a fault outside gRPC, such as a `TimeoutException`). An `RpcException` behaves as in its own overload. See [Fault a call with a non-gRPC exception](#fault-a-call-with-a-non-grpc-exception). |
 | `GrpcCallBuilder.ServerStreaming<T>(IEnumerable<T> responses)` *(v0.3.0+)* | Builds a successful `AsyncServerStreamingCall<T>` whose response stream yields the responses in order then ends with a terminal `OK`. |
 | `GrpcCallBuilder.ServerStreamingFaulted<T>(StatusCode, IEnumerable<T> responses, string? detail = null)` *(v0.3.0+)* | Builds an `AsyncServerStreamingCall<T>` that yields the responses then throws an `RpcException` on the next read. |
 | `GrpcExceptions.IsRpcException(Exception?)` | `true` when the argument is a gRPC `RpcException`; `false` for `null` or any other type. |
@@ -267,7 +268,9 @@ Expected the gRPC call not to throw an RpcException
 but it threw RpcException with StatusCode Unavailable, Detail "connection refused"
 ```
 
-The actual `Status.Detail` in the rendered outcome is truncated at `GrpcOutcomeRendering.MaxDetailLength` (200 characters) with a horizontal-ellipsis suffix, so a verbose server detail does not flood the test output. The expected detail and trailer values are not truncated.
+The actual `Status.Detail` in the rendered outcome is truncated at `GrpcOutcomeRendering.MaxDetailLength` (200 UTF-16 code units) with a horizontal-ellipsis suffix, so a verbose server detail does not flood the test output. The cut never splits a surrogate pair: when an emoji or another supplementary character straddles the limit, it is dropped whole and the rendered detail is one unit shorter. The expected detail and trailer values are not truncated.
+
+A carriage return or line feed in a status detail, an exception message, or a trailer key or value (actual or expected) is rendered as the two characters backslash and `r` or `n`, so each clause of a failure message stays on one line.
 
 ## Cookbook: common patterns
 
@@ -331,11 +334,34 @@ To fault with a pre-built `RpcException` (for example to attach trailers), use t
 ```csharp
 var trailers = new Metadata { { "retry-after", "5" } };
 var ex = new RpcException(new Status(StatusCode.NotFound, "no such greeting"), trailers);
-return GrpcCallBuilder.Faulted<MyResponse>(ex);
+using var call = GrpcCallBuilder.Faulted<MyResponse>(ex);
+
+await Assert.That(call.GetTrailers().GetValue("retry-after")).IsEqualTo("5");
 ```
 
 When you do not need your own exception, `Faulted<T>(StatusCode, string?, Metadata)` is the direct route:
 `GrpcCallBuilder.Faulted<MyResponse>(StatusCode.NotFound, "no such greeting", trailers)`.
+
+### Fault a call with a non-gRPC exception
+
+A real client turns a transport failure into an `RpcException`, but code under test must also survive an exception that did not come from gRPC at all, such as a `TimeoutException` or an `ObjectDisposedException` after a channel swap. `Faulted<T>(Exception)` fails a call with any exception in one line:
+
+```csharp
+using var call = GrpcCallBuilder.Faulted<OrderReply>(new TimeoutException("too slow"));
+
+await Assert.That(async () => await call).Throws<TimeoutException>();
+```
+
+The response task throws the exception itself, not wrapped. The response headers are empty, the trailers are one empty `Metadata` that the accessor returns on every call, and the status is `Unknown` with the exception message (`StatusCode.Cancelled` for an `OperationCanceledException`, the status a real client reports for a canceled call). The response task is faulted, never canceled, even for an `OperationCanceledException`: that matches a real client with `GrpcChannelOptions.ThrowOperationCanceledOnCancellation` set, whereas a real client by default faults with an `RpcException` with `StatusCode.Cancelled`, which `Faulted<T>(StatusCode.Cancelled)` builds. An `RpcException` passed through this overload behaves exactly as in `Faulted<T>(RpcException)`, so a variable typed `Exception` is safe to pass. `ThrowsGrpcException()` over such a call fails with `it threw TimeoutException: too slow`, because the exception is not an `RpcException`.
+
+### How faithful the fakes are
+
+The builders imitate the shape of a real call, not every detail of its life cycle:
+
+- A successful or faulted unary call completes immediately. The trailers accessor returns the same `Metadata` instance on every call, as a real client does.
+- The server-streaming builders materialize the responses when the call is built, so a lazy sequence is enumerated once, at build time, and the stream can be read once.
+- The status and trailers of a call are available at once. A real client throws `InvalidOperationException` from `GetStatus()` and `GetTrailers()` until the call completes, and a fake does not reproduce that.
+- `MoveNext` on the fake stream with a canceled token returns a canceled task, so awaiting it throws `OperationCanceledException`. A real client by default surfaces an `RpcException` with `StatusCode.Cancelled` there, so a wrapper that translates cancellation is better tested against the real client.
 
 ### When *not* to use `ThrowsGrpcException`
 
@@ -404,9 +430,12 @@ await Assert.That(() => client.CancelOrderAsync(request, ct)).DoesNotThrowGrpcEx
 // before: new AsyncUnaryCall<OrderReply>(Task.FromResult(reply), Task.FromResult(new Metadata()),
 //             () => new Status(StatusCode.OK, ""), () => new Metadata(), () => { });
 // after:
-public override AsyncUnaryCall<OrderReply> GetOrderAsync(OrderRequest request, CallOptions options)
-    => _fail ? GrpcCallBuilder.Faulted<OrderReply>(StatusCode.Unavailable, "server down")
-             : GrpcCallBuilder.Success(_reply);
+internal sealed class SwitchableOrdersClient(OrderReply reply, bool fail) : Orders.OrdersClient
+{
+    public override AsyncUnaryCall<OrderReply> GetOrderAsync(OrderRequest request, CallOptions options)
+        => fail ? GrpcCallBuilder.Faulted<OrderReply>(StatusCode.Unavailable, "server down")
+                : GrpcCallBuilder.Success(reply);
+}
 ```
 
 **Discriminate a caught exception before inspecting it:**
@@ -427,18 +456,19 @@ await Assert.That(caught!).IsRpcException();
 
 ## Stability intent (pre-1.0)
 
-Every release through 1.0 is **additive**. The public API of both assemblies is pinned by a snapshot test (`PublicApiTests`) that fails on any change to a public type, member, signature, attribute, or visibility, and `EnablePackageValidation` strict-mode ApiCompat validates each release against its previous baseline at pack time. New surface is added; existing surface is not reshaped within a 0.x line. The 1.0.0 release locks the SemVer contract.
+Every release through 1.0 is **additive** in its public API. The public API of both assemblies is pinned by a snapshot test (`PublicApiTests`) that fails on any change to a public type, member, signature, attribute, or visibility, and `EnablePackageValidation` strict-mode ApiCompat validates each release against its previous baseline at pack time. New surface is added; existing surface is not reshaped within a 0.x line. Corrections to failure-message text and to how a fake behaves are not API changes: the CHANGELOG lists each one. The 1.0.0 release locks the SemVer contract.
 
 ## Roadmap
 
 Scoped to what real consumer suites use; later minor releases add surface as demand appears. All additive.
 
-- **0.4.0**: deadline and cancellation assertions (`ThrowsDeadlineExceeded`, `ThrowsCancelled`, `CompletesWithin(TimeSpan, TimeProvider)` per the cross-family `TimeProvider` convention).
+- **Next**: a server-side call-context builder, for unit-testing service implementations without a host.
+- **When a real call site needs it**: dedicated deadline and cancellation assertions (`ThrowsDeadlineExceeded`, `ThrowsCancelled`, `CompletesWithin`). Today `ThrowsGrpcException(StatusCode.DeadlineExceeded)` and the `IsDeadlineExceeded()` and `IsCancelled()` shorthands cover the observed use.
 - **1.0.0**: stable SemVer contract, full snapshot coverage, and an optional `GrpcAssertions.Analyzers` package.
 
 ## Family compatibility
 
-The nine assertion-family packages: `LogAssertions.TUnit`, `TimeAssertions.TUnit`, `SnapshotAssertions.TUnit`, `MathAssertions.TUnit`, `JsonAssertions.TUnit`, `SseAssertions.TUnit`, `GrpcAssertions.TUnit`, `TracingAssertions.TUnit`, and `MetricsAssertions.TUnit`: release independently and target the same .NET TFM at any moment (LTS-anchored, multi-target during STS support windows; see the [TFM policy in CONVENTIONS.md](CONVENTIONS.md#tfm-policy) for the rotation schedule). **Mix versions freely.** Each package ships under SemVer with `EnablePackageValidation` strict-mode ApiCompat against its previous baseline, so binary breaks within a version line are caught at pack time.
+The nine assertion-family packages: `LogAssertions.TUnit`, `TimeAssertions.TUnit`, `SnapshotAssertions.TUnit`, `MathAssertions.TUnit`, `JsonAssertions.TUnit`, `SseAssertions.TUnit`, `GrpcAssertions.TUnit`, `TracingAssertions.TUnit`, and `MetricsAssertions.TUnit`: release independently and target the same .NET target frameworks at any moment (every .NET version in Microsoft support, never an end-of-life one; see the [TFM policy in CONVENTIONS.md](CONVENTIONS.md#tfm-policy) for the schedule). **Mix versions freely.** Each package ships under SemVer with `EnablePackageValidation` strict-mode ApiCompat against its previous baseline, so binary breaks within a version line are caught at pack time.
 
 For per-package release notes:
 - [LogAssertions.TUnit CHANGELOG](https://github.com/JohnVerheij/LogAssertions.TUnit/blob/main/CHANGELOG.md)

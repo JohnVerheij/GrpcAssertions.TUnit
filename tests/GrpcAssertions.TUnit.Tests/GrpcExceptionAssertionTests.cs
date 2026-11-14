@@ -344,4 +344,104 @@ internal sealed class GrpcExceptionAssertionTests
             await Assert.That(Completing()).ThrowsGrpcException().WithDetail("a").WithDetail("b"))
             .Throws<InvalidOperationException>();
     }
+
+    private static Func<Task> FaultingWithNullDetail()
+        => () => Task.FromException(new RpcException(new Status(StatusCode.Internal, null!)));
+
+    [Test]
+    public async Task WithDetailContaining_NullDetail_FailsTheAssertionInsteadOfThrowingNullReference(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var ex = await Assert.That(async () =>
+            await Assert.That(FaultingWithNullDetail())
+                .ThrowsGrpcException()
+                .WithDetailContaining("x", StringComparison.Ordinal))
+            .Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("with detail containing \"x\"\n");
+        await Assert.That(ex.Message).Contains("but it threw RpcException with StatusCode Internal, Detail \"\"\n");
+    }
+
+    [Test]
+    public async Task WithDetailContaining_NullDetail_PassesForTheEmptySubstring(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That(FaultingWithNullDetail())
+            .ThrowsGrpcException()
+            .WithDetailContaining(string.Empty, StringComparison.Ordinal);
+    }
+
+    [Test]
+    public async Task WithDetail_NullDetail_IsTreatedAsEmpty(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That(FaultingWithNullDetail()).ThrowsGrpcException().WithDetail(string.Empty);
+
+        var ex = await Assert.That(async () =>
+            await Assert.That(FaultingWithNullDetail()).ThrowsGrpcException().WithDetail("x"))
+            .Throws<AssertionException>();
+        await Assert.That(ex!.Message).Contains("but it threw RpcException with StatusCode Internal, Detail \"\"\n");
+    }
+
+    [Test]
+    public async Task WithDetailContaining_DefaultStatus_FailsTheAssertion(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That(async () =>
+            await Assert.That(() => Task.FromException(new RpcException(default(Status))))
+                .ThrowsGrpcException()
+                .WithDetailContaining("x", StringComparison.Ordinal))
+            .Throws<AssertionException>();
+    }
+
+    [Test]
+    public async Task MultiLineDetail_FailureText_KeepsEveryClauseOnOneLine(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var ex = await Assert.That(async () =>
+            await Assert.That(Faulting(StatusCode.Internal, "line1\r\nline2 \"q\""))
+                .ThrowsGrpcException()
+                .WithDetail("a\nb"))
+            .Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("Expected the gRPC call to throw an RpcException with detail \"a\\nb\"\n");
+        await Assert.That(ex.Message).Contains("but it threw RpcException with StatusCode Internal, Detail \"line1\\r\\nline2 \"q\"\"\n");
+    }
+
+    [Test]
+    public async Task MultiLineDetailContaining_ExpectationEscapesLineBreaks(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var ex = await Assert.That(async () =>
+            await Assert.That(Faulting(StatusCode.Internal, "x"))
+                .ThrowsGrpcException()
+                .WithDetailContaining("a\r\nb", StringComparison.Ordinal))
+            .Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("with detail containing \"a\\r\\nb\"\n");
+    }
+
+    [Test]
+    public async Task FaultedCallWithNonRpcException_PlainThrowsPassesAndGrpcAssertionNamesTheType(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var call = GrpcCallBuilder.Faulted<string>(new TimeoutException("too slow"));
+
+        await Assert.That(async () => await call).Throws<TimeoutException>();
+
+        var ex = await Assert.That(async () =>
+            await Assert.That(async () => await call).ThrowsGrpcException())
+            .Throws<AssertionException>();
+        await Assert.That(ex!.Message).Contains("it threw TimeoutException: too slow");
+    }
+
+    [Test]
+    public async Task FaultedCallWithRpcExceptionTypedAsException_SatisfiesGrpcAssertions(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        Exception exception = new RpcException(new Status(StatusCode.NotFound, "gone"));
+        using var call = GrpcCallBuilder.Faulted<string>(exception);
+
+        await Assert.That(async () => await call).ThrowsGrpcException(StatusCode.NotFound).WithDetail("gone");
+    }
 }

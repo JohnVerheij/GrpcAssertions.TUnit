@@ -164,11 +164,42 @@ internal sealed class GrpcCallBuilderTests
     public async Task ServerStreaming_FromLazyEnumerable_Materializes(CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
-        // A lazy (non-IReadOnlyList) sequence exercises the builder's ToList materialization path.
         using var call = GrpcCallBuilder.ServerStreaming(Enumerable.Range(1, 2).Select(i => i.ToString(CultureInfo.InvariantCulture)));
 
         var items = await DrainAsync(call.ResponseStream, ct);
         await Assert.That(items).IsEquivalentTo(OneTwo);
+    }
+
+    [Test]
+    public async Task ServerStreaming_ListChangedAfterBuild_DoesNotReachTheStream(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var source = new List<string> { "a", "b" };
+        using var call = GrpcCallBuilder.ServerStreaming(source);
+        source.Add("late");
+        source[0] = "changed";
+
+        var items = await DrainAsync(call.ResponseStream, ct);
+        await Assert.That(items).IsEquivalentTo(Ab);
+    }
+
+    [Test]
+    public async Task ServerStreamingFaulted_ListChangedAfterBuild_DoesNotReachTheStream(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var source = new List<string> { "a", "b" };
+        using var call = GrpcCallBuilder.ServerStreamingFaulted(StatusCode.Unavailable, source);
+        source.Clear();
+
+        var items = new List<string>();
+        await Assert.That(async () =>
+        {
+            while (await call.ResponseStream.MoveNext(ct))
+            {
+                items.Add(call.ResponseStream.Current);
+            }
+        }).Throws<RpcException>();
+        await Assert.That(items).IsEquivalentTo(Ab);
     }
 
     [Test]
@@ -199,6 +230,34 @@ internal sealed class GrpcCallBuilderTests
 
         await Assert.That(async () => await call.ResponseStream.MoveNext(canceled.Token))
             .Throws<OperationCanceledException>();
+    }
+
+    [Test]
+    public async Task ServerStreaming_MoveNextWithCanceledToken_ReturnsCanceledTaskWithoutThrowing(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var call = GrpcCallBuilder.ServerStreaming(SingleA);
+        using var canceled = new CancellationTokenSource();
+        await canceled.CancelAsync();
+
+        // The call itself must not throw: cancellation is reported through the returned task, as a real reader does.
+        var task = call.ResponseStream.MoveNext(canceled.Token);
+
+        await Assert.That(task.IsCanceled).IsTrue();
+        await Assert.That(async () => await task).Throws<OperationCanceledException>();
+    }
+
+    [Test]
+    public async Task ServerStreamingFaulted_MoveNextWithCanceledToken_ReturnsCanceledTaskWithoutThrowing(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var call = GrpcCallBuilder.ServerStreamingFaulted(StatusCode.Unavailable, SingleA);
+        using var canceled = new CancellationTokenSource();
+        await canceled.CancelAsync();
+
+        var task = call.ResponseStream.MoveNext(canceled.Token);
+
+        await Assert.That(task.IsCanceled).IsTrue();
     }
 
     [Test]
@@ -240,5 +299,145 @@ internal sealed class GrpcCallBuilderTests
         ct.ThrowIfCancellationRequested();
         await Assert.That(() => GrpcCallBuilder.ServerStreamingFaulted<string>(StatusCode.Internal, null!))
             .Throws<ArgumentNullException>();
+    }
+
+    [Test]
+    public async Task ServerStreaming_TrailersAccessor_ReturnsStableInstance(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var call = GrpcCallBuilder.ServerStreaming(["a"]);
+
+        await Assert.That(call.GetTrailers()).IsSameReferenceAs(call.GetTrailers());
+        await Assert.That(call.GetTrailers().Count).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task ServerStreamingFaulted_TrailersAccessor_ReturnsStableInstance(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var call = GrpcCallBuilder.ServerStreamingFaulted(StatusCode.Internal, ["a"], "broke");
+
+        await Assert.That(call.GetTrailers()).IsSameReferenceAs(call.GetTrailers());
+        await Assert.That(call.GetStatus().StatusCode).IsEqualTo(StatusCode.Internal);
+    }
+
+    [Test]
+    public async Task ServerStreamingFaulted_StatusIsAvailableBeforeTheStreamIsRead(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var call = GrpcCallBuilder.ServerStreamingFaulted(StatusCode.DataLoss, ["a", "b"], "lost");
+
+        // Unlike a real call, which throws until it completes, the fake answers immediately.
+        await Assert.That(call.GetStatus().Detail).IsEqualTo("lost");
+        await Assert.That(await call.ResponseStream.MoveNext(ct)).IsTrue();
+        await Assert.That(call.ResponseStream.Current).IsEqualTo("a");
+    }
+
+    [Test]
+    public async Task ServerStreaming_LazySource_IsEnumeratedOnceAtBuildTime(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var enumerations = 0;
+        IEnumerable<int> Source()
+        {
+            enumerations++;
+            yield return 1;
+            yield return 2;
+        }
+
+        using var call = GrpcCallBuilder.ServerStreaming(Source());
+        await Assert.That(enumerations).IsEqualTo(1);
+
+        while (await call.ResponseStream.MoveNext(ct))
+        {
+            // Draining the stream must not enumerate the source again.
+        }
+
+        await Assert.That(enumerations).IsEqualTo(1);
+    }
+
+    [Test]
+    public async Task FaultedException_NonRpcException_FaultsWithTheExceptionItself(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var timeout = new TimeoutException("too slow");
+        using var call = GrpcCallBuilder.Faulted<string>(timeout);
+
+        var thrown = await Assert.That(async () => await call.ResponseAsync).Throws<TimeoutException>();
+        await Assert.That(thrown).IsSameReferenceAs(timeout);
+        await Assert.That((await call.ResponseHeadersAsync).Count).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task FaultedException_NonRpcException_ReportsUnknownStatusWithTheMessage(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var call = GrpcCallBuilder.Faulted<string>(new ObjectDisposedException("channel"));
+
+        await Assert.That(call.GetStatus().StatusCode).IsEqualTo(StatusCode.Unknown);
+        await Assert.That(call.GetStatus().Detail).Contains("channel");
+    }
+
+    [Test]
+    public async Task FaultedException_OperationCanceled_ReportsCancelledStatus(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var call = GrpcCallBuilder.Faulted<string>(new OperationCanceledException("stopped"));
+
+        await Assert.That(call.GetStatus().StatusCode).IsEqualTo(StatusCode.Cancelled);
+        await Assert.That(call.GetStatus().Detail).IsEqualTo("stopped");
+        await Assert.That(async () => await call.ResponseAsync).Throws<OperationCanceledException>();
+    }
+
+    [Test]
+    public async Task FaultedException_OperationCanceled_ResponseTaskIsFaultedNotCanceled(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var call = GrpcCallBuilder.Faulted<string>(new OperationCanceledException("stopped"));
+
+        // Documented task state: faulted with the exception itself, as a real client with
+        // ThrowOperationCanceledOnCancellation set.
+        await Assert.That(call.ResponseAsync.IsFaulted).IsTrue();
+        await Assert.That(call.ResponseAsync.IsCanceled).IsFalse();
+    }
+
+    [Test]
+    public async Task FaultedException_TaskCanceled_ReportsCancelledStatus(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var call = GrpcCallBuilder.Faulted<string>(new TaskCanceledException("stopped"));
+
+        await Assert.That(call.GetStatus().StatusCode).IsEqualTo(StatusCode.Cancelled);
+    }
+
+    [Test]
+    public async Task FaultedException_NonRpcException_TrailersAreOneStableEmptyInstance(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var call = GrpcCallBuilder.Faulted<string>(new InvalidOperationException("x"));
+
+        await Assert.That(call.GetTrailers()).IsSameReferenceAs(call.GetTrailers());
+        await Assert.That(call.GetTrailers().Count).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task FaultedException_RpcExceptionTypedAsException_RoutesToTheRpcExceptionOverload(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var trailers = new Metadata { { "error-code", "BOOM" } };
+        Exception exception = new RpcException(new Status(StatusCode.Unavailable, "server down"), trailers);
+        using var call = GrpcCallBuilder.Faulted<string>(exception);
+
+        var thrown = await Assert.That(async () => await call.ResponseAsync).Throws<RpcException>();
+        await Assert.That(thrown).IsSameReferenceAs(exception);
+        await Assert.That(call.GetStatus().StatusCode).IsEqualTo(StatusCode.Unavailable);
+        await Assert.That(call.GetTrailers().GetValue("error-code")).IsEqualTo("BOOM");
+    }
+
+    [Test]
+    public async Task FaultedException_Null_ThrowsArgumentNull(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That(() => GrpcCallBuilder.Faulted<string>((Exception)null!)).Throws<ArgumentNullException>();
     }
 }
