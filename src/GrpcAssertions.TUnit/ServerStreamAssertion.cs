@@ -78,8 +78,10 @@ public sealed class ServerStreamAssertion<TResponse> : Assertion<AsyncServerStre
         [CallerArgumentExpression(nameof(predicate))] string? predicateExpression = null)
     {
         ArgumentNullException.ThrowIfNull(predicate);
-        _contains.Add((predicate, predicateExpression));
-        Context.ExpressionBuilder.Append(string.Concat(".StreamContains(", predicateExpression, ")"));
+        // A multi-line lambda is captured with its line breaks; keep every failure clause on one line.
+        var description = FailureText.OneLineCode(string.Concat(predicateExpression, string.Empty));
+        _contains.Add((predicate, description));
+        Context.ExpressionBuilder.Append(string.Concat(".StreamContains(", description, ")"));
         return this;
     }
 

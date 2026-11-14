@@ -35,6 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`WithDetailContaining`** threw `NullReferenceException` when the status detail was `null` (`default(Status)`, or a `Status` built with `null`); it now fails the assertion like any other mismatch. A `null` detail now counts as empty for `WithDetail` as well, as the rendered failure message and the builders already treated it.
 - **Failure messages** no longer cut a status detail between the two halves of a surrogate pair, which left a lone surrogate in the output; a pair that straddles the limit is dropped whole.
 - **`MoveNext` on a fake server stream** with an already-canceled token threw `OperationCanceledException` from the call itself; it now returns a canceled task, as the real client reader reports cancellation through the returned task.
+- **`StreamContains`** put the predicate's source text into the failure message with its line breaks, so a multi-line lambda split the `no streamed response matched` clause over several lines; the predicate now reads on one line, each line break and the indentation around it shown as one space.
+- **`ServerStreaming` and `ServerStreamingFaulted`** kept a reference to a `List<T>` or array passed in, so changing the collection after building the call changed the stream, contrary to the documented materialization at build time; they now always copy the responses.
 - **`ServerStreaming`** returned a new trailers `Metadata` from each call of its trailers accessor; it now returns one stable instance, as `Success` does.
 
 ## [0.3.1] - 2026-11-05: worked example for a client wrapper

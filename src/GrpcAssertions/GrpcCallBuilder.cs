@@ -217,7 +217,8 @@ public static class GrpcCallBuilder
     /// <returns>The constructed call.</returns>
     private static AsyncServerStreamingCall<TResponse> BuildServerStreaming<TResponse>(IEnumerable<TResponse> responses, RpcException? fault)
     {
-        var items = responses as IReadOnlyList<TResponse> ?? responses.ToList();
+        // Always copy, even a list or array: a later change to the caller's collection must not reach the stream.
+        IReadOnlyList<TResponse> items = responses.ToList();
         var reader = new FakeAsyncStreamReader<TResponse>(items, fault);
         Func<Status> getStatus = fault is not null
             ? () => fault.Status

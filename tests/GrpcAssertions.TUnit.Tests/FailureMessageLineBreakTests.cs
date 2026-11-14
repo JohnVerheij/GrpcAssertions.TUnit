@@ -18,6 +18,7 @@ internal sealed class FailureMessageLineBreakTests
 {
     private const string DisposedMessage = "Cannot access a disposed object.\r\nObject name: 'channel'.";
     private const string DisposedEscaped = "Cannot access a disposed object.\\r\\nObject name: 'channel'.";
+    private static readonly string[] SingleA = ["a"];
 
     [Test]
     public async Task ThrowsGrpcException_OtherExceptionWithLineBreaks_RendersOneLine(CancellationToken ct)
@@ -81,5 +82,27 @@ internal sealed class FailureMessageLineBreakTests
 
         await Assert.That(ex!.Message).Contains("trailers: note=\"line one\\r\\nline two\"");
         await Assert.That(ex.Message).DoesNotContain("line one\r\nline two");
+    }
+
+    [Test]
+    public async Task StreamContains_MultiLinePredicate_RendersOneLine(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var call = GrpcCallBuilder.ServerStreaming(SingleA);
+        var ex = await Assert.That(async () => await Assert.That(call).Streams(ct)
+                .StreamContains(static s =>
+                    string.Equals(s, "z", StringComparison.Ordinal)))
+            .Throws<AssertionException>();
+
+        var message = ex!.Message;
+        var start = message.IndexOf("no streamed response matched", StringComparison.Ordinal);
+        var end = message.IndexOf("(the stream produced", StringComparison.Ordinal);
+        await Assert.That(start).IsGreaterThanOrEqualTo(0);
+        await Assert.That(end).IsGreaterThan(start);
+        var clause = message.Substring(start, end - start);
+
+        // The code reads on one line: the line break and the indentation after it become one space.
+        await Assert.That(clause).IsEqualTo(
+            "no streamed response matched static s => string.Equals(s, \"z\", StringComparison.Ordinal) ");
     }
 }

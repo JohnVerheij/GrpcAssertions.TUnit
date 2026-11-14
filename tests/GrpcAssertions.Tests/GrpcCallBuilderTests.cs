@@ -164,11 +164,42 @@ internal sealed class GrpcCallBuilderTests
     public async Task ServerStreaming_FromLazyEnumerable_Materializes(CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
-        // A lazy (non-IReadOnlyList) sequence exercises the builder's ToList materialization path.
         using var call = GrpcCallBuilder.ServerStreaming(Enumerable.Range(1, 2).Select(i => i.ToString(CultureInfo.InvariantCulture)));
 
         var items = await DrainAsync(call.ResponseStream, ct);
         await Assert.That(items).IsEquivalentTo(OneTwo);
+    }
+
+    [Test]
+    public async Task ServerStreaming_ListChangedAfterBuild_DoesNotReachTheStream(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var source = new List<string> { "a", "b" };
+        using var call = GrpcCallBuilder.ServerStreaming(source);
+        source.Add("late");
+        source[0] = "changed";
+
+        var items = await DrainAsync(call.ResponseStream, ct);
+        await Assert.That(items).IsEquivalentTo(Ab);
+    }
+
+    [Test]
+    public async Task ServerStreamingFaulted_ListChangedAfterBuild_DoesNotReachTheStream(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var source = new List<string> { "a", "b" };
+        using var call = GrpcCallBuilder.ServerStreamingFaulted(StatusCode.Unavailable, source);
+        source.Clear();
+
+        var items = new List<string>();
+        await Assert.That(async () =>
+        {
+            while (await call.ResponseStream.MoveNext(ct))
+            {
+                items.Add(call.ResponseStream.Current);
+            }
+        }).Throws<RpcException>();
+        await Assert.That(items).IsEquivalentTo(Ab);
     }
 
     [Test]

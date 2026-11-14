@@ -9,6 +9,17 @@ namespace GrpcAssertions.TUnit;
 /// </summary>
 internal static class FailureText
 {
+    /// <summary>The line-break characters that <see cref="OneLineCode"/> splits on.</summary>
+    private static readonly char[] LineBreaks = ['\r', '\n'];
+
+    /// <summary>Renders source code captured by <c>CallerArgumentExpression</c> (a predicate's text) on one line, as
+    /// the code reads: each line break, with the indentation around it, becomes one space. Line breaks in code carry
+    /// no meaning, so escaping them would only add noise.</summary>
+    /// <param name="code">The captured source text.</param>
+    /// <returns>The code on one line.</returns>
+    internal static string OneLineCode(string code)
+        => string.Join(' ', code.Split(LineBreaks, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+
     /// <summary>Renders a carriage return as a backslash and <c>r</c>, and a line feed as a backslash and
     /// <c>n</c>, so the value occupies one line.</summary>
     /// <param name="value">The text to escape.</param>
