@@ -76,6 +76,47 @@ public static class GrpcCallBuilder
     }
 
     /// <summary>
+    /// Builds a faulted <see cref="AsyncUnaryCall{TResponse}"/> whose response task throws
+    /// <paramref name="exception"/> itself, not wrapped: the one-line fake for a fault outside gRPC, such as a
+    /// <see cref="TimeoutException"/> or an <see cref="ObjectDisposedException"/>. An
+    /// <see cref="RpcException"/> passed through this overload behaves exactly as in
+    /// <see cref="Faulted{TResponse}(RpcException)"/>, so a variable typed <see cref="Exception"/> is safe to pass.
+    /// </summary>
+    /// <typeparam name="TResponse">The gRPC response message type.</typeparam>
+    /// <param name="exception">The exception the call faults with. Must not be null.</param>
+    /// <returns>A faulted <see cref="AsyncUnaryCall{TResponse}"/>.</returns>
+    /// <remarks>
+    /// For any exception other than an <see cref="RpcException"/> the response headers are one empty
+    /// <see cref="Metadata"/>, the trailers accessor returns one stable empty <see cref="Metadata"/>, and the status
+    /// is <see cref="StatusCode.Cancelled"/> for an <see cref="OperationCanceledException"/> (what a real client
+    /// reports for one) and <see cref="StatusCode.Unknown"/> (the status a gRPC server gives an unhandled exception)
+    /// for every other type, with the exception message as detail. A real client never surfaces a raw non-gRPC
+    /// exception from <c>ResponseAsync</c>; it wraps the exception in an <see cref="RpcException"/>, so this overload
+    /// is for testing code that must survive such an exception, not for imitating a client.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException"><paramref name="exception"/> is null.</exception>
+    public static AsyncUnaryCall<TResponse> Faulted<TResponse>(Exception exception)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+
+        if (exception is RpcException rpcException)
+        {
+            return Faulted<TResponse>(rpcException);
+        }
+
+        var status = new Status(
+            exception is OperationCanceledException ? StatusCode.Cancelled : StatusCode.Unknown,
+            exception.Message);
+        var trailers = new Metadata();
+        return new AsyncUnaryCall<TResponse>(
+            Task.FromException<TResponse>(exception),
+            Task.FromResult(new Metadata()),
+            () => status,
+            () => trailers,
+            static () => { });
+    }
+
+    /// <summary>
     /// Builds a faulted <see cref="AsyncUnaryCall{TResponse}"/> from a status code and detail,
     /// the most common faulted-call shape in tests: a convenience over
     /// <see cref="Faulted{TResponse}(RpcException)"/> that constructs the
@@ -116,6 +157,14 @@ public static class GrpcCallBuilder
     /// <param name="responses">The responses the stream yields, in order. Must not be null; an empty
     /// sequence produces a stream that ends immediately.</param>
     /// <returns>A successful <see cref="AsyncServerStreamingCall{TResponse}"/>.</returns>
+    /// <remarks>
+    /// The responses are materialized when the call is built, so a lazy sequence is enumerated once, at build time.
+    /// The status and trailers accessors work immediately and return the same <see cref="Metadata"/> instance on
+    /// every call; a real client throws <see cref="InvalidOperationException"/> from them until the call completes.
+    /// The reader follows the <see cref="IAsyncStreamReader{T}"/> convention: <c>MoveNext</c> with a canceled token
+    /// throws <see cref="OperationCanceledException"/>, where a real client surfaces an <see cref="RpcException"/>
+    /// with <see cref="StatusCode.Cancelled"/>.
+    /// </remarks>
     /// <exception cref="ArgumentNullException"><paramref name="responses"/> is null.</exception>
     public static AsyncServerStreamingCall<TResponse> ServerStreaming<TResponse>(IEnumerable<TResponse> responses)
     {
@@ -135,6 +184,14 @@ public static class GrpcCallBuilder
     /// empty sequence faults on the first read.</param>
     /// <param name="detail">The status detail message. A null value is treated as an empty string.</param>
     /// <returns>A faulted-after-<paramref name="responses"/> <see cref="AsyncServerStreamingCall{TResponse}"/>.</returns>
+    /// <remarks>
+    /// The responses are materialized when the call is built, so a lazy sequence is enumerated once, at build time.
+    /// The status and trailers accessors work immediately and return the same <see cref="Metadata"/> instance (the fault status and trailers) on
+    /// every call; a real client throws <see cref="InvalidOperationException"/> from them until the call completes.
+    /// The reader follows the <see cref="IAsyncStreamReader{T}"/> convention: <c>MoveNext</c> with a canceled token
+    /// throws <see cref="OperationCanceledException"/>, where a real client surfaces an <see cref="RpcException"/>
+    /// with <see cref="StatusCode.Cancelled"/>.
+    /// </remarks>
     /// <exception cref="ArgumentNullException"><paramref name="responses"/> is null.</exception>
     public static AsyncServerStreamingCall<TResponse> ServerStreamingFaulted<TResponse>(
         StatusCode statusCode,
@@ -158,9 +215,8 @@ public static class GrpcCallBuilder
         Func<Status> getStatus = fault is not null
             ? () => fault.Status
             : static () => new Status(StatusCode.OK, string.Empty);
-        Func<Metadata> getTrailers = fault is not null
-            ? () => fault.Trailers
-            : static () => new Metadata();
+        var trailers = fault?.Trailers ?? new Metadata();
+        Func<Metadata> getTrailers = () => trailers;
 
         return new AsyncServerStreamingCall<TResponse>(
             reader,

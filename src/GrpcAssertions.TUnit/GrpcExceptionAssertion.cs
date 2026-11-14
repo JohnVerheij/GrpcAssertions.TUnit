@@ -228,7 +228,10 @@ public sealed class GrpcExceptionAssertion : Assertion<RpcException>
         if (_hasDetailCheck)
         {
             var detailPrefix = _detailContains ? " with detail containing \"" : " with detail \"";
-            detail = string.Concat(detailPrefix, _expectedDetail, "\"");
+            detail = string.Concat(
+                detailPrefix,
+                _expectedDetail!.Replace("\r", "\\r", StringComparison.Ordinal).Replace("\n", "\\n", StringComparison.Ordinal),
+                "\"");
         }
 
         var trailers = string.Empty;
@@ -324,8 +327,13 @@ public sealed class GrpcExceptionAssertion : Assertion<RpcException>
             .Replace("\r", "\\r", StringComparison.Ordinal)
             .Replace("\n", "\\n", StringComparison.Ordinal);
 
+    // A null detail (default(Status), or a Status built with null) counts as empty, as the rendered
+    // failure text and the builders already treat it.
     private bool DetailMatches(RpcException rpc)
-        => _detailContains
-            ? rpc.Status.Detail.Contains(_expectedDetail!, _detailComparison)
-            : string.Equals(rpc.Status.Detail, _expectedDetail, _detailComparison);
+    {
+        var detail = rpc.Status.Detail ?? string.Empty;
+        return _detailContains
+            ? detail.Contains(_expectedDetail!, _detailComparison)
+            : string.Equals(detail, _expectedDetail, _detailComparison);
+    }
 }
