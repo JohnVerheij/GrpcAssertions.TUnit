@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-15: faulted unary calls, .NET 11, failure-text and stream fixes
+
 ### Added
 
 - **`GrpcCallBuilder.Faulted<TResponse>(Exception)`** fails a unary call with any exception in one line, for a fault outside gRPC such as a `TimeoutException` or an `ObjectDisposedException`. The response task throws the exception itself, the response headers are empty, the trailers accessor returns one empty `Metadata` on every call, and the status is `Unknown` with the exception message (`StatusCode.Cancelled` for an `OperationCanceledException`, the status a real client reports for a canceled call). The response task is faulted, never canceled, even for an `OperationCanceledException`, as with a real client that has `GrpcChannelOptions.ThrowOperationCanceledOnCancellation` set. An `RpcException` passed through this overload behaves exactly as in `Faulted<TResponse>(RpcException)`.
@@ -127,7 +129,8 @@ Skeleton release. Establishes the repository, the `GrpcAssertions` (core) and `G
 - **`GrpcExceptions.IsRpcException(Exception?)`** framework-agnostic predicate in the `GrpcAssertions` core package. Returns `false` for `null` and for any non-`RpcException` type. The adapter assertion is a thin wrapper over this helper, so a future xUnit, NUnit, or MSTest adapter reuses the same logic.
 - Single disclosed runtime dependency: `Grpc.Core.Api` (Apache-2.0), the package that defines the `RpcException` / `StatusCode` / `Status` types the assertions are about. It flows transitively to consumers through the core package.
 
-[unreleased]: https://github.com/JohnVerheij/GrpcAssertions.TUnit/compare/v0.3.1...HEAD
+[unreleased]: https://github.com/JohnVerheij/GrpcAssertions.TUnit/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/JohnVerheij/GrpcAssertions.TUnit/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/JohnVerheij/GrpcAssertions.TUnit/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/JohnVerheij/GrpcAssertions.TUnit/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/JohnVerheij/GrpcAssertions.TUnit/compare/v0.1.2...v0.2.0
