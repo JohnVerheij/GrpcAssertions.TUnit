@@ -270,7 +270,7 @@ but it threw RpcException with StatusCode Unavailable, Detail "connection refuse
 
 The actual `Status.Detail` in the rendered outcome is truncated at `GrpcOutcomeRendering.MaxDetailLength` (200 UTF-16 code units) with a horizontal-ellipsis suffix, so a verbose server detail does not flood the test output. The cut never splits a surrogate pair: when an emoji or another supplementary character straddles the limit, it is dropped whole and the rendered detail is one unit shorter. The expected detail and trailer values are not truncated.
 
-A carriage return or line feed in a detail, actual or expected, is rendered as the two characters backslash and `r` or `n`, so each clause of a failure message stays on one line.
+A carriage return or line feed in a status detail, an exception message, or a trailer key or value (actual or expected) is rendered as the two characters backslash and `r` or `n`, so each clause of a failure message stays on one line.
 
 ## Cookbook: common patterns
 
@@ -352,7 +352,7 @@ using var call = GrpcCallBuilder.Faulted<OrderReply>(new TimeoutException("too s
 await Assert.That(async () => await call).Throws<TimeoutException>();
 ```
 
-The response task throws the exception itself, not wrapped. The response headers are empty, the trailers are one empty `Metadata` that the accessor returns on every call, and the status is `Unknown` with the exception message (`StatusCode.Cancelled` for an `OperationCanceledException`, which is what a real client reports for one). An `RpcException` passed through this overload behaves exactly as in `Faulted<T>(RpcException)`, so a variable typed `Exception` is safe to pass. `ThrowsGrpcException()` over such a call fails with `it threw TimeoutException: too slow`, because the exception is not an `RpcException`.
+The response task throws the exception itself, not wrapped. The response headers are empty, the trailers are one empty `Metadata` that the accessor returns on every call, and the status is `Unknown` with the exception message (`StatusCode.Cancelled` for an `OperationCanceledException`, the status a real client reports for a canceled call). The response task is faulted, never canceled, even for an `OperationCanceledException`: that matches a real client with `GrpcChannelOptions.ThrowOperationCanceledOnCancellation` set, whereas a real client by default faults with an `RpcException` with `StatusCode.Cancelled`, which `Faulted<T>(StatusCode.Cancelled)` builds. An `RpcException` passed through this overload behaves exactly as in `Faulted<T>(RpcException)`, so a variable typed `Exception` is safe to pass. `ThrowsGrpcException()` over such a call fails with `it threw TimeoutException: too slow`, because the exception is not an `RpcException`.
 
 ### How faithful the fakes are
 
@@ -361,7 +361,7 @@ The builders imitate the shape of a real call, not every detail of its life cycl
 - A successful or faulted unary call completes immediately. The trailers accessor returns the same `Metadata` instance on every call, as a real client does.
 - The server-streaming builders materialize the responses when the call is built, so a lazy sequence is enumerated once, at build time, and the stream can be read once.
 - The status and trailers of a call are available at once. A real client throws `InvalidOperationException` from `GetStatus()` and `GetTrailers()` until the call completes, and a fake does not reproduce that.
-- `MoveNext` on the fake stream with a canceled token throws `OperationCanceledException`. A real client surfaces an `RpcException` with `StatusCode.Cancelled` there, so a wrapper that translates cancellation is better tested against the real client.
+- `MoveNext` on the fake stream with a canceled token returns a canceled task, so awaiting it throws `OperationCanceledException`. A real client by default surfaces an `RpcException` with `StatusCode.Cancelled` there, so a wrapper that translates cancellation is better tested against the real client.
 
 ### When *not* to use `ThrowsGrpcException`
 

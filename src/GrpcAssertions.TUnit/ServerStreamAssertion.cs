@@ -103,8 +103,7 @@ public sealed class ServerStreamAssertion<TResponse> : Assertion<AsyncServerStre
     {
         if (metadata.Exception is not null)
         {
-            return AssertionResult.Failed(string.Concat(
-                "it threw ", metadata.Exception.GetType().Name, ": ", metadata.Exception.Message));
+            return AssertionResult.Failed(FailureText.DescribeThrown(metadata.Exception));
         }
 
         var call = metadata.Value;

@@ -202,6 +202,34 @@ internal sealed class GrpcCallBuilderTests
     }
 
     [Test]
+    public async Task ServerStreaming_MoveNextWithCanceledToken_ReturnsCanceledTaskWithoutThrowing(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var call = GrpcCallBuilder.ServerStreaming(SingleA);
+        using var canceled = new CancellationTokenSource();
+        await canceled.CancelAsync();
+
+        // The call itself must not throw: cancellation is reported through the returned task, as a real reader does.
+        var task = call.ResponseStream.MoveNext(canceled.Token);
+
+        await Assert.That(task.IsCanceled).IsTrue();
+        await Assert.That(async () => await task).Throws<OperationCanceledException>();
+    }
+
+    [Test]
+    public async Task ServerStreamingFaulted_MoveNextWithCanceledToken_ReturnsCanceledTaskWithoutThrowing(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var call = GrpcCallBuilder.ServerStreamingFaulted(StatusCode.Unavailable, SingleA);
+        using var canceled = new CancellationTokenSource();
+        await canceled.CancelAsync();
+
+        var task = call.ResponseStream.MoveNext(canceled.Token);
+
+        await Assert.That(task.IsCanceled).IsTrue();
+    }
+
+    [Test]
     public async Task ServerStreaming_NullResponses_ThrowsArgumentNull(CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
@@ -328,6 +356,18 @@ internal sealed class GrpcCallBuilderTests
         await Assert.That(call.GetStatus().StatusCode).IsEqualTo(StatusCode.Cancelled);
         await Assert.That(call.GetStatus().Detail).IsEqualTo("stopped");
         await Assert.That(async () => await call.ResponseAsync).Throws<OperationCanceledException>();
+    }
+
+    [Test]
+    public async Task FaultedException_OperationCanceled_ResponseTaskIsFaultedNotCanceled(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var call = GrpcCallBuilder.Faulted<string>(new OperationCanceledException("stopped"));
+
+        // Documented task state: faulted with the exception itself, as a real client with
+        // ThrowOperationCanceledOnCancellation set.
+        await Assert.That(call.ResponseAsync.IsFaulted).IsTrue();
+        await Assert.That(call.ResponseAsync.IsCanceled).IsFalse();
     }
 
     [Test]
