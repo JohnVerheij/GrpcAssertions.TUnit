@@ -105,4 +105,30 @@ internal sealed class FailureMessageLineBreakTests
         await Assert.That(clause).IsEqualTo(
             "no streamed response matched static s => string.Equals(s, \"z\", StringComparison.Ordinal) ");
     }
+
+    [Test]
+    public async Task StreamContains_PredicateWithAMultiLineRawString_ShowsTheLiteralAsWritten(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var call = GrpcCallBuilder.ServerStreaming(SingleA);
+        var ex = await Assert.That(async () => await Assert.That(call).Streams(ct)
+                .StreamContains(static s => string.Equals(s, """
+                    first
+                    second
+                    """, StringComparison.Ordinal)))
+            .Throws<AssertionException>();
+
+        var message = ex!.Message;
+        var start = message.IndexOf("no streamed response matched", StringComparison.Ordinal);
+        var end = message.IndexOf("(the stream produced", StringComparison.Ordinal);
+        await Assert.That(end).IsGreaterThan(start);
+
+        // The line breaks inside the literal are its content, so they are escaped instead of joined into spaces. The
+        // line endings of this file decide between an escaped CRLF and an escaped LF.
+        var clause = message.Substring(start, end - start).Replace("\\r\\n", "\\n", StringComparison.Ordinal);
+        await Assert.That(clause.AsSpan().IndexOfAny('\r', '\n')).IsEqualTo(-1);
+        await Assert.That(clause).Contains("string.Equals(s, \"\"\"\\n");
+        await Assert.That(clause).Contains("first\\n");
+        await Assert.That(clause).Contains("second\\n");
+    }
 }

@@ -1,6 +1,7 @@
 [assembly: System.Reflection.AssemblyMetadata("IsAotCompatible", "True")]
 [assembly: System.Reflection.AssemblyMetadata("IsTrimmable", "True")]
 [assembly: System.Reflection.AssemblyMetadata("RepositoryUrl", "https://github.com/JohnVerheij/GrpcAssertions.TUnit")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("GrpcAssertions.TUnit.Tests")]
 namespace GrpcAssertions.TUnit
 {
     public sealed class GrpcDoesNotThrowAssertion<TValue> : TUnit.Assertions.Core.Assertion<TValue>

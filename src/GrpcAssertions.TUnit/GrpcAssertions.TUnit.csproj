@@ -73,6 +73,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The tests pin the predicate rendering rule case by case, whatever the line endings of a test file. -->
+    <InternalsVisibleTo Include="GrpcAssertions.TUnit.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="/" />
   </ItemGroup>
 

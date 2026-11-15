@@ -12,13 +12,22 @@ internal static class FailureText
     /// <summary>The line-break characters that <see cref="OneLineCode"/> splits on.</summary>
     private static readonly char[] LineBreaks = ['\r', '\n'];
 
-    /// <summary>Renders source code captured by <c>CallerArgumentExpression</c> (a predicate's text) on one line, as
-    /// the code reads: each line break, with the indentation around it, becomes one space. Line breaks in code carry
-    /// no meaning, so escaping them would only add noise.</summary>
+    /// <summary>The markers of source text in which a line break can carry meaning: a verbatim string (also an
+    /// interpolated one) or a raw string literal can hold one, a line comment and a preprocessor directive end at one,
+    /// and a block comment can span one. A regular string or character literal cannot hold a line break.</summary>
+    private static readonly string[] MeaningfulLineBreakMarkers = ["@\"", "@$\"", "\"\"\"", "//", "/*", "#"];
+
+    /// <summary>Renders source code captured by <c>CallerArgumentExpression</c> (a predicate's text) on one line. As
+    /// the code reads, each line break, with the indentation around it, becomes one space: between tokens a line
+    /// break carries no meaning, so escaping it would only add noise. When the code holds a literal or comment whose
+    /// line breaks can matter (see <see cref="MeaningfulLineBreakMarkers"/>), the line breaks are escaped instead, so
+    /// the text shows such a literal or comment as written.</summary>
     /// <param name="code">The captured source text.</param>
     /// <returns>The code on one line.</returns>
     internal static string OneLineCode(string code)
-        => string.Join(' ', code.Split(LineBreaks, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        => Array.Exists(MeaningfulLineBreakMarkers, marker => code.Contains(marker, StringComparison.Ordinal))
+            ? EscapeLineBreaks(code)
+            : string.Join(' ', code.Split(LineBreaks, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
 
     /// <summary>Renders a carriage return as a backslash and <c>r</c>, and a line feed as a backslash and
     /// <c>n</c>, so the value occupies one line.</summary>
