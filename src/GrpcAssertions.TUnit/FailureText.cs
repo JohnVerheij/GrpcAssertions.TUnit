@@ -20,13 +20,14 @@ internal static class FailureText
     /// <summary>Renders source code captured by <c>CallerArgumentExpression</c> (a predicate's text) on one line. As
     /// the code reads, each line break, with the indentation around it, becomes one space: between tokens a line
     /// break carries no meaning, so escaping it would only add noise. When the code holds a literal or comment whose
-    /// line breaks can matter (see <see cref="MeaningfulLineBreakMarkers"/>), the line breaks are escaped instead, so
-    /// the text shows such a literal or comment as written.</summary>
+    /// line breaks can matter (see <see cref="MeaningfulLineBreakMarkers"/>), the code is escaped instead: each
+    /// backslash is doubled first, then each line break is escaped, so a line break and a backslash followed by
+    /// <c>n</c> stay apart and the text maps back to the source exactly.</summary>
     /// <param name="code">The captured source text.</param>
     /// <returns>The code on one line.</returns>
     internal static string OneLineCode(string code)
         => Array.Exists(MeaningfulLineBreakMarkers, marker => code.Contains(marker, StringComparison.Ordinal))
-            ? EscapeLineBreaks(code)
+            ? EscapeLineBreaks(code.Replace("\\", "\\\\", StringComparison.Ordinal))
             : string.Join(' ', code.Split(LineBreaks, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
 
     /// <summary>Renders a carriage return as a backslash and <c>r</c>, and a line feed as a backslash and
