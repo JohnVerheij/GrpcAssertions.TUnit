@@ -29,16 +29,42 @@ internal sealed class RpcExceptionAssertionsTests
             await Assert.That(exception).IsRpcException();
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("RpcException");
-        await Assert.That(ex.Message).Contains("InvalidOperationException");
+        await Assert.That(ex!.Message).Contains("Expected to be a gRPC RpcException\nbut it was InvalidOperationException");
+        await Assert.That(ex.Message).DoesNotContain("System.InvalidOperationException");
     }
 
     [Test]
-    public async Task IsRpcException_Null_ThrowsArgumentNull(CancellationToken ct)
+    public async Task IsRpcException_Null_FailsInsteadOfThrowing(CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
-        Exception nullException = null!;
-        await Assert.That(async () => await Task.Run(() => nullException.IsRpcException(), ct))
-            .Throws<ArgumentNullException>();
+        Exception? nullException = null;
+
+        // Called directly, as the core predicate is: null is not an RpcException.
+        var result = RpcExceptionAssertions.IsRpcException(nullException!);
+
+        await Assert.That(result.IsPassed).IsFalse();
+        await Assert.That(result.Message).IsEqualTo("it was null");
+    }
+
+    [Test]
+    public async Task IsRpcException_NullThroughTheAssertionChain_Fails(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        Exception? nullException = null;
+        var ex = await Assert.That(async () => await Assert.That(nullException).IsRpcException())
+            .Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("Expected to be a gRPC RpcException\nbut");
+    }
+
+    [Test]
+    public async Task IsRpcException_WrappedRpcException_Fails(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        Exception wrapped = new InvalidOperationException("outer", new RpcException(new Status(StatusCode.Internal, "inner")));
+        var ex = await Assert.That(async () => await Assert.That(wrapped).IsRpcException())
+            .Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("but it was InvalidOperationException");
     }
 }

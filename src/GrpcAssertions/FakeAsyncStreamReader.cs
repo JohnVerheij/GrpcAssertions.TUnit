@@ -35,9 +35,15 @@ internal sealed class FakeAsyncStreamReader<T> : IAsyncStreamReader<T>
         : throw new InvalidOperationException("No current element; call MoveNext and check its result first.");
 
     /// <inheritdoc/>
+    /// <remarks>An already-canceled token is reported through the returned task, which is canceled; the call
+    /// itself does not throw. The real Grpc.Net.Client reader reports cancellation through the returned task
+    /// as well.</remarks>
     public Task<bool> MoveNext(CancellationToken cancellationToken)
     {
-        cancellationToken.ThrowIfCancellationRequested();
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return Task.FromCanceled<bool>(cancellationToken);
+        }
 
         if (_index < _items.Count)
         {

@@ -131,6 +131,17 @@ internal sealed class ServerStreamAssertionTests
     }
 
     [Test]
+    public async Task Streams_CallFactoryThrows_FailsNamingTheExceptionType(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        Func<AsyncServerStreamingCall<string>> factory = () => throw new InvalidOperationException("factory broke");
+        var ex = await Assert.That(async () => await Assert.That(factory).Streams(ct).StreamsAtLeast(0))
+            .Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("it threw InvalidOperationException: factory broke");
+    }
+
+    [Test]
     public async Task Streams_StreamsAtLeast_Negative_ThrowsArgumentOutOfRange(CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();

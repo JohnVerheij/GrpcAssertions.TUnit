@@ -25,17 +25,12 @@ public static class RpcExceptionAssertions
     /// </summary>
     /// <param name="value">The exception under test.</param>
     /// <returns>A passing assertion when <paramref name="value"/> is a gRPC <c>RpcException</c>;
-    /// otherwise a failing assertion naming the actual exception type.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="value"/> is <see langword="null"/>.</exception>
-    [GenerateAssertion]
+    /// otherwise a failing assertion naming the actual exception type, or saying it was
+    /// <see langword="null"/>. Like <see cref="GrpcExceptions.IsRpcException(Exception)"/>, a
+    /// <see langword="null"/> value is not an <c>RpcException</c> and fails instead of throwing.</returns>
+    [GenerateAssertion(ExpectationMessage = "to be a gRPC RpcException")]
     public static AssertionResult IsRpcException(this Exception value)
-    {
-        ArgumentNullException.ThrowIfNull(value);
-
-        return GrpcExceptions.IsRpcException(value)
+        => GrpcExceptions.IsRpcException(value)
             ? AssertionResult.Passed
-            : AssertionResult.Failed(string.Concat(
-                "the exception to be a gRPC RpcException\n  but got: ",
-                value.GetType().FullName));
-    }
+            : AssertionResult.Failed(string.Concat("it was ", value?.GetType().Name ?? "null"));
 }

@@ -23,6 +23,7 @@ jobs:
     with:
       package: GrpcAssertions
       license-allowlist: Grpc.Core.Api=Apache-2.0
+      readme-samples: enforce
       release: true
     permissions:
       contents: read

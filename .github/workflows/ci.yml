@@ -24,6 +24,7 @@ jobs:
     with:
       package: GrpcAssertions
       license-allowlist: Grpc.Core.Api=Apache-2.0
+      readme-samples: enforce
     permissions:
       contents: read
       id-token: write   # Codecov upload through OIDC
