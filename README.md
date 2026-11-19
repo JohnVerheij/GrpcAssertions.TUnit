@@ -61,7 +61,7 @@ This library collapses that to one chain, and ships the `GrpcCallBuilder` test-d
 dotnet add package GrpcAssertions.TUnit
 ```
 
-**Requirements:** TUnit 1.86.0 or later, .NET 10 or .NET 11. The framework-agnostic `GrpcAssertions` core and its single `Grpc.Core.Api` dependency come transitively. The package is AOT-compatible, trimmable, and uses no runtime reflection in the assertion path.
+**Requirements:** TUnit 1.87.0 or later, .NET 10 or .NET 11. The framework-agnostic `GrpcAssertions` core and its single `Grpc.Core.Api` dependency come transitively. The package is AOT-compatible, trimmable, and uses no runtime reflection in the assertion path.
 
 ## Package layout
 
