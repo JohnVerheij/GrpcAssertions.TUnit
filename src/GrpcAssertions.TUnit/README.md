@@ -31,7 +31,7 @@ The framework-agnostic core (`GrpcAssertions`) also ships the `GrpcCallBuilder` 
 dotnet add package GrpcAssertions.TUnit
 ```
 
-**Requirements:** TUnit 1.87.0 or later, .NET 10 or .NET 11. The framework-agnostic `GrpcAssertions` core and its `Grpc.Core.Api` dependency come transitively.
+**Requirements:** TUnit 1.87.12 or later, .NET 10 or .NET 11. The framework-agnostic `GrpcAssertions` core and its `Grpc.Core.Api` dependency come transitively.
 
 ## Quick start
 
